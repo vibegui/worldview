@@ -35,7 +35,7 @@ export async function visitorHash(
   ua: string,
 ): Promise<string | null> {
   if (!ip && !ua) return null;
-  const salt = env.ANALYTICS_SALT || env.WORLDVIEW_PASSWORD || "worldview";
+  const salt = env.ANALYTICS_SALT || env.WORLDVIEW_PASSWORD || env.MCP_PRIVATE_TOKEN || "worldview";
   const day = new Date().toISOString().slice(0, 10);
   const material = `${salt}:${day}:${ip}:${ua}`;
   const digest = await crypto.subtle.digest(

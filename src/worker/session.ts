@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "./auth.ts";
+import { passwordFor, timingSafeEqual } from "./auth.ts";
 import type { Env } from "./env.ts";
 
 /**
@@ -90,11 +90,9 @@ export function readCookie(request: Request, name: string): string | null {
 }
 
 export async function hasSession(request: Request, env: Env): Promise<boolean> {
-  if (!env.WORLDVIEW_PASSWORD) return false;
-  return verifySession(
-    readCookie(request, COOKIE_NAME),
-    env.WORLDVIEW_PASSWORD,
-  );
+  const password = passwordFor(env);
+  if (!password) return false;
+  return verifySession(readCookie(request, COOKIE_NAME), password);
 }
 
 export async function handleLogin(
@@ -108,7 +106,7 @@ export async function handleLogin(
   // a password a human chose.
   const form = await request.formData().catch(() => null);
   const submitted = form?.get("password");
-  const expected = env.WORLDVIEW_PASSWORD;
+  const expected = passwordFor(env);
 
   if (!expected) {
     return loginPage(url, "No password is configured on this deployment.", 503);

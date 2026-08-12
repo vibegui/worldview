@@ -10,6 +10,7 @@
   "files": [
     "src",
     "migrations",
+    "scripts",
     "dist-mcp"
   ],
   "scripts": {
@@ -48,5 +49,8 @@
     "vite": "^8.1.4",
     "vite-plugin-singlefile": "^2.3.3",
     "wrangler": "^4.110.0"
+  },
+  "bin": {
+    "worldview-db-pull": "./scripts/db-pull.ts"
   }
 }

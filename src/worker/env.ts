@@ -48,7 +48,10 @@ export interface Env extends ResolvedConfig {
   PUBLIC_REPO_RAW_ORIGIN?: string;
   GITHUB_USERNAME?: string;
   AUTORAG_INSTANCE?: string;
+  /** The one credential: browser password and MCP bearer token. */
   WORLDVIEW_PASSWORD?: string;
+  /** Its former name. Still honoured so deployments predating the rename work. */
+  MCP_PRIVATE_TOKEN?: string;
   MESH_GATEWAY_URL?: string;
   MESH_API_KEY?: string;
   GITHUB_TOKEN?: string;

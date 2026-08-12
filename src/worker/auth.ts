@@ -31,8 +31,21 @@ export function timingSafeEqual(left: string, right: string): boolean {
   return difference === 0;
 }
 
+/**
+ * The one credential, under either name.
+ *
+ * `MCP_PRIVATE_TOKEN` was the original name and is still the secret set on
+ * deployments that predate the rename. Accepting both means an existing worker
+ * keeps working after a deploy without anyone remembering to re-put a secret —
+ * and forgetting would not error, it would silently drop the deployment to the
+ * public tier, which is the worst kind of failure: quiet and total.
+ */
+export function passwordFor(env: Env): string | undefined {
+  return env.WORLDVIEW_PASSWORD || env.MCP_PRIVATE_TOKEN;
+}
+
 export function accessForRequest(request: Request, env: Env): AccessLevel {
-  const expected = env.WORLDVIEW_PASSWORD;
+  const expected = passwordFor(env);
   if (!expected) return "public";
 
   const received = extractPrivateToken(request);
