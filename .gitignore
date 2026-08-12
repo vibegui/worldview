@@ -6,3 +6,5 @@ dist-mcp/
 .env
 *.log
 .DS_Store
+src/generated/
+.context/

@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Env } from "../src/worker/env.ts";
 import { getDeclarationDashboard, setStrategicResultProgress } from "../src/worker/state.ts";
-import { SCORE_IDS, worldview } from "../src/core/worldview.ts";
+import { SCORE_IDS } from "../src/core/worldview.ts";
+import declarationJson from "../worldview.json" with { type: "json" };
+import { resolveWorldview } from "../src/core/worldview.ts";
+
+const worldview = resolveWorldview({ declaration: declarationJson });
+
 
 /**
  * The declared future is authoritative in git; D1 only holds measurement.
@@ -37,7 +42,9 @@ function env(strategicRows: Row[], scorecardRows: Row[]): Env {
     },
     _captured: captured,
   };
-  return { DB: db } as unknown as Env;
+  // The declaration arrives on env, the way an instance's config does — the
+  // library never reads it from disk.
+  return { DB: db, worldview } as unknown as Env;
 }
 
 describe("declaration: git structure joined with D1 measurement", () => {

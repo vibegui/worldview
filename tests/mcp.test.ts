@@ -7,7 +7,21 @@ import {
   PERSONAL_AI_OS_RESOURCE,
 } from "../src/worker/tools.ts";
 
-const env = {} as Env;
+import declarationJson from "../worldview.json" with { type: "json" };
+import { resolveWorldview } from "../src/core/worldview.ts";
+
+const worldview = resolveWorldview({ declaration: declarationJson });
+
+/** An instance with every optional module turned on. */
+const env = {
+  worldview,
+  publicWriting: { siteOrigin: "https://example.com", manifestPath: "/m.json" },
+  bookmarks: { publicRoutes: true },
+  analytics: { sites: ["example.com"] },
+} as Env;
+
+/** An instance that configured nothing: declaration, projects, scores. */
+const bare = { worldview } as Env;
 
 describe("MCP capability boundary", () => {
   test("public clients see only public writing tools", async () => {
@@ -46,6 +60,45 @@ describe("MCP capability boundary", () => {
     expect(names).toContain("GET_BOOKMARK_ADMIN");
     expect(names).toContain("IMPORT_BOOKMARKS");
     expect(names).toContain("ENRICH_BOOKMARK");
+  });
+
+  test("an unconfigured module is absent, not disabled", async () => {
+    const result = (await dispatchMcp(bare, "private", "tools/list")) as {
+      tools: Array<{ name: string }>;
+    };
+    const names = result.tools.map((tool) => tool.name);
+
+    // Core survives with no configuration at all.
+    expect(names).toContain("GET_DECLARATION");
+    expect(names).toContain("GET_PORTFOLIO");
+    expect(names).toContain("RECALL_MEMORY");
+
+    // Modules the instance never configured do not exist. A tool that appears
+    // and then throws "not configured" advertises a capability the deployment
+    // cannot honour.
+    for (const absent of [
+      "LIST_BOOKMARKS",
+      "LIST_ALL_BOOKMARKS",
+      "ENRICH_BOOKMARK",
+      "SITES_OVERVIEW",
+      "SITE_METRICS",
+      "LIST_PUBLIC_WRITING",
+      "SEARCH_PUBLIC_WRITING",
+    ]) {
+      expect(names, `${absent} leaked from an unconfigured module`).not.toContain(
+        absent,
+      );
+    }
+  });
+
+  test("calling into an unconfigured module fails like an unknown tool", async () => {
+    // Filtering the list is not enough — guessing the name must not work either.
+    expect(
+      dispatchMcp(bare, "private", "tools/call", {
+        name: "LIST_ALL_BOOKMARKS",
+        arguments: {},
+      }),
+    ).rejects.toThrow(/Unknown tool/);
   });
 
   test("guessed private tool calls fail for public clients", async () => {
@@ -90,7 +143,7 @@ describe("MCP capability boundary", () => {
     })) as { contents: Array<{ text: string }> };
 
     expect(result.contents[0]?.text).toContain(
-      "window.__BOOT_TOOL__='LIST_ALL_BOOKMARKS'",
+      'window.__BOOT_TOOL__="LIST_ALL_BOOKMARKS"',
     );
   });
 

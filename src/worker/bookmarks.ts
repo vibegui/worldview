@@ -901,7 +901,10 @@ async function replaceFirecrawlContent(
   }
 
   const encoded = new TextEncoder().encode(content);
-  const hash = await sha256Hex(encoded.buffer);
+  // `.buffer` is typed ArrayBufferLike, which widens to SharedArrayBuffer under
+  // a consuming project's stricter lib settings. A fresh encode is always an
+  // ArrayBuffer and costs nothing at this size.
+  const hash = await sha256Hex(encoded.buffer as ArrayBuffer);
   const key = `bookmarks/${bookmarkId}/firecrawl.md`;
   await env.CORPUS.put(key, encoded, {
     httpMetadata: { contentType: "text/markdown; charset=utf-8" },

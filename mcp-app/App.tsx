@@ -2,16 +2,35 @@ import { useEffect, useRef, useState } from "react";
 import { BookmarksView, isBookmarkTool } from "./bookmarks/BookmarksView";
 import { useMcp } from "./mcp";
 
+const globals = (typeof window !== "undefined" ? window : {}) as {
+  __STANDALONE__?: boolean;
+  __WORLDVIEW__?: { name?: string; results?: Record<string, string> };
+};
+
+const STANDALONE = globals.__STANDALONE__ === true;
+
+/**
+ * The instance's declaration, injected by the worker when it serves this bundle.
+ *
+ * It cannot be imported: this file is built once, into the library, while the
+ * declaration belongs to whichever instance is serving it. Baking it in at
+ * library build time would ship one person's worldview to everyone.
+ */
+const declaration = globals.__WORLDVIEW__ ?? {};
+const resultTitles: Record<string, string> = declaration.results ?? {};
+
 type JsonRecord = Record<string, unknown>;
 
+// The loop, in order: declare a future, run the projects that pursue it, see how
+// they are performing, keep what you learned, and accumulate what you learned
+// from. Goals and Inbox are gone as destinations — a goal belongs to the project
+// it serves, and an unfiled capture surfaces at the top of Projects.
 const NAV_ITEMS = [
   { label: "Declaration", tool: "GET_DECLARATION" },
-  { label: "Analytics", tool: "SITES_OVERVIEW" },
   { label: "Projects", tool: "GET_PORTFOLIO" },
-  { label: "Goals", tool: "LIST_GOALS" },
-  { label: "Inbox", tool: "GET_INBOX" },
-  { label: "Bookmarks", tool: "LIST_ALL_BOOKMARKS" },
-  { label: "Memory", tool: "RECALL_MEMORY" },
+  { label: "Analytics", tool: "SITES_OVERVIEW" },
+  { label: "Learning", tool: "RECALL_MEMORY" },
+  { label: "Library", tool: "LIST_ALL_BOOKMARKS" },
 ] as const;
 
 export function App() {
@@ -30,29 +49,38 @@ export function App() {
   return (
     <main className={`shell ${bookmarksActive ? "bookmarks-shell" : ""}`}>
       <header className="topbar">
-        <p className="os-label">VibeGui OS</p>
-        <span className={`connection ${connected ? "online" : ""}`}>
-          {connected ? "Private Studio" : "Connecting"}
-        </span>
-      </header>
+        <p className="os-label">{declaration.name ?? "Worldview"}</p>
 
-      <nav className="nav" aria-label="Worldview OS views">
-        {NAV_ITEMS.map((item) => (
-          <button
-            type="button"
-            key={item.tool}
-            className={
-              toolName === item.tool ||
-              (item.tool === "LIST_ALL_BOOKMARKS" && bookmarksActive)
-                ? "active"
-                : ""
-            }
-            onClick={() => void callTool(item.tool)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
+        <nav className="nav" aria-label="Worldview views">
+          {NAV_ITEMS.map((item) => (
+            <button
+              type="button"
+              key={item.tool}
+              className={
+                toolName === item.tool ||
+                (item.tool === "LIST_ALL_BOOKMARKS" && bookmarksActive)
+                  ? "active"
+                  : ""
+              }
+              onClick={() => void callTool(item.tool)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {STANDALONE ? (
+          <form method="post" action="/logout">
+            <button type="submit" className="signout">
+              Sign out
+            </button>
+          </form>
+        ) : (
+          <span className={`connection ${connected ? "online" : ""}`}>
+            {connected ? "Private Studio" : "Connecting"}
+          </span>
+        )}
+      </header>
 
       <section className="content" aria-live="polite">
         <ResultView
@@ -149,6 +177,7 @@ function ResultView({
         declaredFuture={text(about?.declared_future)}
         markdown={text(longForm?.markdown ?? result.markdown)}
         source={text(longForm?.source ?? result.source)}
+        conditions={asStrings(game?.conditions_of_satisfaction)}
         strategicResults={asRecords(
           game?.strategic_results ?? result.strategic_results,
         )}
@@ -174,10 +203,30 @@ function PortfolioView({
 }) {
   const projects = asRecords(result.projects);
   const dailyBrief = asNullableRecord(result.daily_brief);
+  const unfiled = asRecords(result.unfiled);
 
   return (
     <>
       <DailyBriefHomeCard brief={dailyBrief} prepare={prepareBrief} />
+
+      {/* Captures that belong to no project yet. Everything else is reachable
+          through the project it is filed under; this is the only home these
+          have, and an inbox nobody sees is an inbox nobody empties. */}
+      {unfiled.length > 0 && (
+        <section className="unfiled">
+          <p className="eyebrow">
+            Unfiled · {unfiled.length}
+          </p>
+          <ul>
+            {unfiled.map((capture) => (
+              <li key={text(capture.id)}>
+                <span className="unfiled-kind">{text(capture.kind)}</span>
+                {text(capture.content)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="section-heading">
         <div>
@@ -204,6 +253,14 @@ function PortfolioView({
                   </span>
                   <h3>{text(project.name)}</h3>
                 </div>
+                {/* The declared result this project pursues. Saying so when
+                    there is none is the point — that project is why alignment
+                    is not 100%. */}
+                <p className={`serves ${project.serves ? "" : "none"}`}>
+                  {project.serves
+                    ? `Serves · ${resultTitles[text(project.serves)] ?? text(project.serves)}`
+                    : "Serves nothing declared"}
+                </p>
                 <p className="spirit">
                   {text(project.spirit) || text(project.description)}
                 </p>
@@ -1027,6 +1084,7 @@ function DeclarationView({
   declaredFuture,
   markdown,
   source,
+  conditions,
   strategicResults,
   scores,
   diagnostics,
@@ -1034,13 +1092,14 @@ function DeclarationView({
   declaredFuture: string;
   markdown: string;
   source: string;
+  conditions: string[];
   strategicResults: JsonRecord[];
   scores: JsonRecord | null;
   diagnostics: JsonRecord[];
 }) {
   const [charterExpanded, setCharterExpanded] = useState(false);
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
-  if (!declaredFuture && !markdown) {
+  if (!declaredFuture && !markdown && !conditions.length) {
     return <Empty message="The declaration could not be loaded." />;
   }
   const charter = extractDeclarationSection(
@@ -1048,22 +1107,28 @@ function DeclarationView({
     "## Charter",
     "## Strategic Outcomes",
   );
-  const conditions = extractDeclarationSection(
-    markdown,
-    "## Conditions of Satisfaction",
-    "## December 2026 Scorecard",
-  );
-  // The declared future in worldview.json is authoritative; the long-form
-  // charter in DECLARATION.md is the expandable detail behind it.
-  const statement =
-    declaredFuture ||
-    charter.paragraphs[0] ||
-    "VibeGui is my Worldview OS.";
+  // The declaration is authoritative for both the statement and the conditions;
+  // the long-form markdown is optional detail that most instances never publish.
+  // Scraping it is only a fallback for a declaration written before the
+  // conditions moved into worldview.json.
+  const conditionItems = conditions.length
+    ? conditions
+    : extractDeclarationSection(
+        markdown,
+        "## Conditions of Satisfaction",
+        "## December 2026 Scorecard",
+      ).bullets;
+  const statement = declaredFuture || charter.paragraphs[0] || "";
   const alignment = asNullableRecord(scores?.alignment);
   const integrity = asNullableRecord(scores?.integrity);
 
   return (
     <article className="declaration">
+      {/* The two questions that matter share the first screen: what my life is
+          about on the left, whether I am playing it well on the right. The
+          scores used to sit below a full-width charter, which put the only
+          numbers in the system under a fold. */}
+      <div className="declaration-hero">
       <section className="charter-card">
         <p className="eyebrow">What my life is about</p>
         {statement.split("\n\n").map((paragraph) => (
@@ -1095,18 +1160,19 @@ function DeclarationView({
         )}
       </section>
 
-      <section className="declaration-block">
+      <section className="declaration-block scores-block">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Two scores, no others</p>
             <h2>Am I playing it well?</h2>
           </div>
         </div>
-        <div className="scorecard-grid">
+        <div className="scorecard-grid scores-grid">
           {alignment && <ScoreCard score={alignment} />}
           {integrity && <ScoreCard score={integrity} />}
         </div>
       </section>
+      </div>
 
       <section className="declaration-block">
         <div className="section-heading">
@@ -1130,7 +1196,7 @@ function DeclarationView({
           </div>
         </div>
         <ul>
-          {conditions.bullets.map((item) => (
+          {conditionItems.map((item) => (
             <li key={item}>{cleanMarkdown(item)}</li>
           ))}
         </ul>
@@ -1179,7 +1245,7 @@ function ScoreCard({ score }: { score: JsonRecord }) {
   const domains = asNullableRecord(score.domains);
 
   return (
-    <article className="scorecard-item">
+    <article className="scorecard-item score-card">
       <p>{text(score.label)}</p>
       {measured ? (
         <strong className={countToZero && number(raw) > 0 ? "not-yet" : "yes"}>
@@ -1191,6 +1257,9 @@ function ScoreCard({ score }: { score: JsonRecord }) {
       )}
       <small>{text(score.question)}</small>
       <small>{text(score.measure)}</small>
+      {/* Where the number came from. A score you cannot open is a rumor, so the
+          working is part of the score, not a tooltip. */}
+      {text(score.note) && <small className="score-note">{text(score.note)}</small>}
       {domains && (
         <ul className="charter-details">
           {["word", "systems", "objects"].map((key) => (
@@ -1215,6 +1284,19 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
         <div>
           <p className="eyebrow">
             Result {String(number(result.position)).padStart(2, "0")}
+            {" · "}
+            {/* Declared progress next to how much active work actually points
+                here. A result at 40% with no projects is the gap the whole
+                system exists to show. */}
+            <span
+              className={
+                number(result.active_project_count) === 0 ? "serves none" : ""
+              }
+            >
+              {number(result.active_project_count) === 1
+                ? "1 project"
+                : `${number(result.active_project_count)} projects`}
+            </span>
           </p>
           <h3>{text(result.title)}</h3>
         </div>
@@ -1237,16 +1319,25 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
         <div>
           <p className="project-label">Metrics</p>
           <div className="result-metrics">
-            {metrics.map((metric) => (
-              <div key={text(metric.label)}>
-                <strong>
-                  {number(metric.current)} / {number(metric.target)}
-                </strong>
-                <span>
-                  {text(metric.label)} · {text(metric.unit)}
-                </span>
-              </div>
-            ))}
+            {metrics.map((metric) => {
+              // Metrics are declared in git with a target only; nothing in D1
+              // measures them yet. Rendering `0 / target` asserted a zero for
+              // every one of them, which is a number nobody produced.
+              const measured =
+                metric.current !== null && metric.current !== undefined;
+              return (
+                <div key={text(metric.label)}>
+                  <strong className={measured ? undefined : "unmeasured"}>
+                    {measured
+                      ? `${number(metric.current)} / ${number(metric.target)}`
+                      : `target ${number(metric.target)}`}
+                  </strong>
+                  <span>
+                    {text(metric.label)} · {text(metric.unit)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

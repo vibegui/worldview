@@ -47,17 +47,20 @@ export async function searchWritingCorpus(
 }
 
 export async function getCorpusStatus(env: Env) {
+  // The AI Search binding is optional: it has to be provisioned in the account
+  // before wrangler will even start, so a deployment without one should report
+  // that plainly rather than fail. R2 works locally with no setup.
   const [objects, search] = await Promise.all([
-    env.CORPUS.list({ prefix: "articles/", limit: 1000 }),
-    env.AUTORAG.stats().catch(() => null),
+    env.CORPUS.list({ prefix: "articles/", limit: 1000 }).catch(() => null),
+    env.AUTORAG?.stats().catch(() => null) ?? null,
   ]);
 
   return {
-    bucket: "vibegui-corpus",
+    search_configured: Boolean(env.AUTORAG),
     prefix: "articles/",
-    markdown_objects: objects.objects.length,
-    truncated: objects.truncated,
-    autorag_instance: env.AUTORAG_INSTANCE,
+    markdown_objects: objects?.objects.length ?? null,
+    truncated: objects?.truncated ?? null,
+    autorag_instance: env.AUTORAG_INSTANCE ?? null,
     indexed_objects: search?.engine?.r2?.objectCount ?? null,
     vectors: search?.engine?.vectorize?.vectorsCount ?? null,
     dimensions: search?.engine?.vectorize?.dimensions ?? null,

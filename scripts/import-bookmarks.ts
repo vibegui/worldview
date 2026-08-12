@@ -44,10 +44,10 @@ const endpoint =
 if (!endpoint) {
   throw new Error("Set BOOKMARKS_MCP_URL or pass --url when using --remote");
 }
-const token = process.env.MCP_PRIVATE_TOKEN;
+const token = process.env.WORLDVIEW_PASSWORD;
 if (!token && !new URL(endpoint).searchParams.has("token")) {
   throw new Error(
-    "MCP_PRIVATE_TOKEN is required unless the endpoint URL contains a token",
+    "WORLDVIEW_PASSWORD is required unless the endpoint URL contains a token",
   );
 }
 const batchSize = clamp(Number(argumentValue("--batch-size") ?? 5), 1, 100);

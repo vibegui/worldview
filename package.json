@@ -1,24 +1,37 @@
 {
   "name": "worldview",
   "version": "0.1.0",
-  "description": "What your life is about, what game you are playing, and whether you are playing it well — as an MCP app.",
-  "private": true,
+  "description": "What your life is about, what game you are playing, and whether you are playing it well \u2014 as an MCP app.",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrations/*": "./migrations/*"
+  },
+  "files": [
+    "src",
+    "migrations",
+    "dist-mcp"
+  ],
   "scripts": {
     "dev": "wrangler dev",
     "dev:app": "vite build --watch",
-    "build": "vite build",
+    "build": "vite build && bun scripts/inline-app.ts",
     "check": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun run build && bun test",
     "types": "wrangler types",
-    "db:local": "wrangler d1 migrations apply vibegui-personal-ai-os --local",
-    "db:remote": "wrangler d1 migrations apply vibegui-personal-ai-os --remote",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "demo": "bun run demo:setup && bun run dev",
+    "demo:setup": "bun scripts/demo-setup.ts",
+    "demo:seed": "wrangler d1 execute DB --local --file=seeds/demo.sql",
+    "demo:reset": "rm -rf .wrangler/state && bun run db:local && bun run demo:seed",
     "corpus:upload": "bun scripts/upload-corpus.ts",
     "corpus:upload:remote": "bun scripts/upload-corpus.ts --remote",
     "bookmarks:import": "bun scripts/import-bookmarks.ts --local",
     "bookmarks:import:remote": "bun scripts/import-bookmarks.ts --remote",
     "deploy": "bun run build && wrangler deploy",
-    "deploy:dry": "bun run build && wrangler deploy --dry-run"
+    "deploy:dry": "bun run build && wrangler deploy --dry-run",
+    "prepare": "bun run build"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.4",

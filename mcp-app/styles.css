@@ -67,12 +67,24 @@ button {
   padding: 28px;
 }
 
+/* One row: name, views, sign out. The nav used to sit on its own line under the
+   name, which spent a whole band of vertical space on a word and a button. */
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The nav takes the slack so the sign out button stays pinned right. min-width
+   lets it shrink and scroll instead of shoving the button off screen. */
+.topbar .nav {
+  min-width: 0;
+  flex: 1;
+  margin-bottom: 0;
+  border-bottom: 0;
 }
 
 .section-heading h2,
@@ -127,6 +139,26 @@ button {
   box-shadow: 0 0 0 3px color-mix(in srgb, #79a17c 18%, transparent);
 }
 
+/* Standalone only. A button needs its own reset: without one the user agent
+   supplies a background and a font, which is what made this unreadable. */
+.signout {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.signout:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
 .empty button {
   padding: 10px 15px;
   border: 0;
@@ -172,6 +204,58 @@ button {
 
 .content {
   min-height: 260px;
+}
+
+.scorecard-item small.score-note {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+
+.serves {
+  margin: 6px 0 0;
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+}
+
+/* Not an error state — a project serving nothing declared is a real answer, and
+   the reason alignment is below 100. Muted, not red. */
+.serves.none {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.unfiled {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.unfiled ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unfiled li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.unfiled-kind {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .daily-brief-card {
@@ -573,6 +657,43 @@ button {
   max-width: none;
 }
 
+/* The first screen answers two of the three questions at once. Left column is
+   the declared future, right column is the two scores — they are a pair, and
+   stacking them put every number in the system below the fold. */
+.declaration-hero {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.declaration-hero .charter-card {
+  max-height: 76vh;
+  padding: 22px;
+  overflow-y: auto;
+}
+
+/* Already at the top of the page, so it does not need the 48px that separates
+   the sections below it. */
+.declaration-hero .scores-block {
+  margin-top: 0;
+}
+
+/* Half width means the two scores stack rather than sit side by side. */
+.declaration-hero .scores-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 860px) {
+  .declaration-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .declaration-hero .charter-card {
+    max-height: none;
+  }
+}
+
 .charter-card {
   padding: clamp(24px, 5vw, 36px);
   border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
@@ -588,6 +709,20 @@ button {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.25rem, 3vw, 1.65rem);
   font-weight: 500;
+  line-height: 1.45;
+}
+
+/* Half a column of prose, so it reads as a paragraph rather than a poster. */
+.declaration-hero .charter-statement {
+  margin: 10px 0 14px;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+/* The three integrity domains are definitions, not body copy. At full size they
+   made the score card taller than the charter beside it. */
+.declaration-hero .score-card .charter-details li {
+  font-size: 0.78rem;
   line-height: 1.45;
 }
 
@@ -738,6 +873,13 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* Declared but never measured. It reads as a target, not as an achievement of
+   zero, because no evidence produced a zero. */
+.result-metrics strong.unmeasured {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .result-metrics span {
   margin-top: 2px;
   color: var(--muted);
@@ -789,6 +931,38 @@ button {
   margin-top: 7px;
   color: var(--muted);
   font-size: 0.62rem;
+}
+
+/* The two headline scores, not the diagnostics tiles below them. Diagnostics are
+   a uniform grid whose numbers line up along the bottom edge; the scores are two
+   cards of genuinely different length, because integrity carries its three
+   domains and alignment does not. Sharing `margin-top: auto` between them left
+   the alignment number floating at the bottom of a card sized by integrity. */
+.scores-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.score-card > strong {
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 2.1rem;
+  line-height: 1.1;
+}
+
+.score-card > p {
+  min-height: 0;
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .scores-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .scorecard-item.boolean > strong {

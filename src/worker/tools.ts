@@ -27,7 +27,6 @@ import {
   searchPublicWriting,
 } from "./public-content.ts";
 import { getCorpusStatus, searchWritingCorpus } from "./rag.ts";
-import { worldview } from "../core/worldview.ts";
 import {
   capture,
   createGoal,
@@ -466,19 +465,23 @@ export const tools: ToolDefinition[] = [
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
     execute: async (env) => {
+      // The long-form charter is an optional extra: an instance that publishes
+      // one gets it nested under the declared future, and one that does not
+      // still gets a working declaration. Fetching it must never be able to
+      // fail the whole tool.
       const [declaration, dashboard] = await Promise.all([
-        getDeclaration(env),
+        getDeclaration(env).catch(() => null),
         getDeclarationDashboard(env),
       ]);
       return {
         what_my_life_is_about: {
-          declared_future: worldview.declaredFuture,
+          declared_future: env.worldview.declaredFuture,
           source: "worldview.json",
           long_form: declaration,
         },
         what_game_i_am_playing: {
           strategic_results: dashboard.strategic_results,
-          conditions_of_satisfaction: worldview.conditionsOfSatisfaction,
+          conditions_of_satisfaction: env.worldview.conditionsOfSatisfaction,
         },
         am_i_playing_it_well: dashboard.scores,
         diagnostics: dashboard.diagnostics,
@@ -573,6 +576,16 @@ export const tools: ToolDefinition[] = [
           maximum: 100,
         },
         progress_note: { type: "string" },
+        position: {
+          type: ["number", "null"],
+          description:
+            "Deliberate order within the lifecycle group, lowest first. Not a priority label — it is the owner's chosen sequence. Omit to leave the current order untouched.",
+        },
+        serves: {
+          type: ["string", "null"],
+          description:
+            "Id of the declared strategic result this project pursues. Must already exist in worldview.json — declare it in git first. Null means the project serves nothing declared, which is a real answer and is what the alignment score measures. Omit to leave an existing link untouched.",
+        },
       },
       ["name"],
     ),
@@ -594,6 +607,8 @@ export const tools: ToolDefinition[] = [
         next_review: optionalNullableString(input, "next_review"),
         progress_percent: optionalNullableNumber(input, "progress_percent"),
         progress_note: optionalString(input, "progress_note"),
+        position: optionalNullableNumber(input, "position"),
+        serves: optionalNullableString(input, "serves"),
       }),
   },
   {
@@ -1032,10 +1047,44 @@ export const toolByName: Record<string, ToolDefinition> = Object.fromEntries(
   tools.map((tool) => [tool.name, tool]),
 );
 
-export function toolsForAccess(access: AccessLevel): ToolDefinition[] {
-  return tools.filter(
-    (tool) => tool.access === "public" || access === "private",
-  );
+/**
+ * Which module each tool belongs to. A tool with no entry is core and always
+ * present; the rest exist only when the instance configured that module.
+ *
+ * Absent, not disabled: a tool that appears and then throws "not configured"
+ * advertises a capability the deployment cannot honour, and every caller has to
+ * learn that the hard way.
+ */
+const TOOL_MODULE: Record<string, "publicWriting" | "bookmarks" | "analytics"> =
+  {
+    LIST_PUBLIC_WRITING: "publicWriting",
+    GET_PUBLIC_WRITING: "publicWriting",
+    SEARCH_PUBLIC_WRITING: "publicWriting",
+    GET_CORPUS_STATUS: "publicWriting",
+    SITES_OVERVIEW: "analytics",
+    SITE_METRICS: "analytics",
+    LIST_BOOKMARKS: "bookmarks",
+    SEARCH_BOOKMARKS: "bookmarks",
+    GET_BOOKMARK: "bookmarks",
+    LIST_ALL_BOOKMARKS: "bookmarks",
+    SEARCH_ALL_BOOKMARKS: "bookmarks",
+    GET_BOOKMARK_ADMIN: "bookmarks",
+    CREATE_BOOKMARK: "bookmarks",
+    UPDATE_BOOKMARK: "bookmarks",
+    DELETE_BOOKMARK: "bookmarks",
+    IMPORT_BOOKMARKS: "bookmarks",
+    ENRICH_BOOKMARK: "bookmarks",
+  };
+
+export function toolsForAccess(
+  env: Env,
+  access: AccessLevel,
+): ToolDefinition[] {
+  return tools.filter((tool) => {
+    if (tool.access !== "public" && access !== "private") return false;
+    const module = TOOL_MODULE[tool.name];
+    return !module || Boolean(env[module]);
+  });
 }
 
 export function mergeSemanticWriting<

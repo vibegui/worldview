@@ -6,16 +6,44 @@ import {
   listBookmarks,
   searchBookmarks,
 } from "./bookmarks.ts";
-import type { Env } from "./env.ts";
+import type { Env, ResolvedConfig } from "./env.ts";
 import { refreshGitHub } from "./github.ts";
 import { handleMcpRequest } from "./mcp.ts";
+import { appHtml } from "./resources.ts";
+import {
+  COOKIE_NAME,
+  handleLogin,
+  handleLogout,
+  hasSession,
+  loginPage,
+  readCookie,
+} from "./session.ts";
 import { markBriefDue } from "./state.ts";
 import { EVENT_NAME_RE, pruneEvents, track } from "./track.ts";
 
-const worker: ExportedHandler<Env> = {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const access = accessForRequest(request, env);
+/**
+ * Build the worker around one instance's configuration.
+ *
+ * The config is folded into `env` rather than threaded through every signature:
+ * handlers already receive `env`, and the declaration is read the same way a
+ * binding is. That keeps the diff at the call sites to `env.worldview` instead
+ * of a module-level import.
+ */
+export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
+  const SERVICE_NAME = config.worldview.instance;
+
+  return {
+    async fetch(request, baseEnv, ctx) {
+      const env: Env = { ...baseEnv, ...config };
+      const url = new URL(request.url);
+    // Two ways to hold the one credential: a bearer token an MCP client sends,
+    // or a signed cookie a browser got by typing the password. Both mean the
+    // same thing to every check downstream.
+    const access =
+      accessForRequest(request, env) === "private" ||
+      (await hasSession(request, env))
+        ? "private"
+        : "public";
 
     if (
       request.method === "OPTIONS" &&
@@ -170,12 +198,24 @@ const worker: ExportedHandler<Env> = {
       return new Response(null, { status: 204 });
     }
 
+    if (request.method === "POST" && url.pathname === "/login") {
+      return handleLogin(request, env, url);
+    }
+
+    if (request.method === "POST" && url.pathname === "/logout") {
+      return handleLogout(url);
+    }
+
+    // The standalone entry point: the same UI bundle an MCP host reads as a
+    // resource, served to a browser once it holds a session.
     if (request.method === "GET" && url.pathname === "/") {
-      return json({
-        name: "vibegui-personal-ai-os",
-        ok: true,
-        publicMcp: `${url.origin}/mcp`,
-        privateMode: access === "private",
+      if (access !== "private") return loginPage(url);
+      return new Response(appHtml(env, null, true), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
       });
     }
 
@@ -183,7 +223,7 @@ const worker: ExportedHandler<Env> = {
       return json({
         jsonrpc: "2.0",
         server: {
-          name: "vibegui-personal-ai-os",
+          name: SERVICE_NAME,
           version: "0.1.0",
         },
         mode: access,
@@ -192,28 +232,35 @@ const worker: ExportedHandler<Env> = {
     }
 
     if (request.method === "POST" && url.pathname === "/mcp") {
+      // A browser whose session expired should be sent back to the form, not
+      // shown a tool list with everything quietly missing. Only a request that
+      // carries our cookie can be in that situation; a plain MCP client with no
+      // token still gets the public tier.
+      if (access === "public" && readCookie(request, COOKIE_NAME)) {
+        return json({ error: "session expired" }, 401);
+      }
       return handleMcpRequest(request, env, access);
     }
 
-    return json({ error: "not found", path: url.pathname }, 404);
-  },
+      return json({ error: "not found", path: url.pathname }, 404);
+    },
 
-  async scheduled(_controller, env, context) {
-    context.waitUntil(
-      Promise.all([
-        markBriefDue(env),
-        pruneEvents(env),
-        env.GITHUB_TOKEN
-          ? refreshGitHub(env).catch((error) => {
-              console.warn("Scheduled GitHub refresh failed", error);
-            })
-          : Promise.resolve(),
-      ]).then(() => undefined),
-    );
-  },
-};
-
-export default worker;
+    async scheduled(_controller, baseEnv, context) {
+      const env: Env = { ...baseEnv, ...config };
+      context.waitUntil(
+        Promise.all([
+          markBriefDue(env),
+          pruneEvents(env),
+          env.GITHUB_TOKEN
+            ? refreshGitHub(env).catch((error) => {
+                console.warn("Scheduled GitHub refresh failed", error);
+              })
+            : Promise.resolve(),
+        ]).then(() => undefined),
+      );
+    },
+  };
+}
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {

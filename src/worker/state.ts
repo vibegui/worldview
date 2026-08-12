@@ -3,7 +3,6 @@ import {
   SCORE_IDS,
   type ScoreId,
   strategicResultById,
-  worldview,
 } from "../core/worldview.ts";
 
 type ProjectLifecycle = "draft" | "active" | "archived";
@@ -27,6 +26,14 @@ export interface SaveProjectInput {
   next_review?: string | null;
   progress_percent?: number | null;
   progress_note?: string;
+  /** Deliberate order within the lifecycle group. Unset sorts last, by name. */
+  position?: number | null;
+  /**
+   * Id of the declared strategic result this project pursues, or null for none.
+   * Validated against worldview.json. Omit the key to leave an existing link
+   * untouched; pass null to clear it.
+   */
+  serves?: string | null;
 }
 
 export interface CreateGoalInput {
@@ -70,20 +77,43 @@ export interface RememberInput {
  * simply reads as 0% — no migration needed to add one.
  */
 export async function getDeclarationDashboard(env: Env) {
-  const [progressRows, scorecard] = await Promise.all([
-    env.DB.prepare(
-      "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
-    ).all<Record<string, unknown>>(),
-    env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
-      Record<string, unknown>
-    >(),
-  ]);
+  const [progressRows, scorecard, alignmentRow, servedCounts] =
+    await Promise.all([
+      env.DB.prepare(
+        "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
+      ).all<Record<string, unknown>>(),
+      env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
+        Record<string, unknown>
+      >(),
+      // Alignment is derived, never asserted: the share of active projects that
+      // name a declared strategic result. Every number here comes from this
+      // query, so the score opens.
+      env.DB.prepare(
+        `SELECT COUNT(*) AS active, COUNT(serves) AS serving
+         FROM projects WHERE lifecycle = 'active'`,
+      ).first<{ active: number; serving: number }>(),
+      env.DB.prepare(
+        `SELECT serves, COUNT(*) AS n FROM projects
+         WHERE lifecycle = 'active' AND serves IS NOT NULL
+         GROUP BY serves`,
+      ).all<{ serves: string; n: number }>(),
+    ]);
 
   const progressById = new Map(
     progressRows.results.map((row) => [String(row.id), row]),
   );
+  const projectsByResult = new Map(
+    servedCounts.results.map((row) => [row.serves, Number(row.n)]),
+  );
 
-  const strategicResults = worldview.strategicResults
+  const active = Number(alignmentRow?.active ?? 0);
+  const serving = Number(alignmentRow?.serving ?? 0);
+  // No active projects is not zero alignment — it is nothing to measure. A share
+  // of nothing is not a number, and inventing one would be inventing a number.
+  const alignmentValue = active > 0 ? Math.round((serving / active) * 100) : null;
+  const unaligned = active - serving;
+
+  const strategicResults = env.worldview.strategicResults
     .slice()
     .sort((a, b) => a.position - b.position)
     .map((result) => {
@@ -100,6 +130,9 @@ export async function getDeclarationDashboard(env: Env) {
         progress_percent: Number(progress?.progress_percent ?? 0),
         progress_note: String(progress?.progress_note ?? ""),
         updated_at: progress?.updated_at ?? null,
+        // How much active work is actually pointed at this result. Zero here on
+        // a result with progress is the interesting disagreement.
+        active_project_count: projectsByResult.get(result.id) ?? 0,
       };
     });
 
@@ -111,11 +144,21 @@ export async function getDeclarationDashboard(env: Env) {
     strategic_results: strategicResults,
     scores: {
       alignment: {
-        ...worldview.scores.alignment,
+        ...env.worldview.scores.alignment,
         ...pickScoreValue(scoreValueById.get("alignment")),
+        // Derived last, so it wins over anything previously typed into the
+        // scorecard row. The note explains the fraction rather than asserting it.
+        current_value: alignmentValue,
+        note:
+          active > 0
+            ? `${serving} of ${active} active projects serve a declared result` +
+              (unaligned > 0
+                ? `; ${unaligned} ${unaligned === 1 ? "serves" : "serve"} nothing declared`
+                : "")
+            : "No active projects to measure",
       },
       integrity: {
-        ...worldview.scores.integrity,
+        ...env.worldview.scores.integrity,
         ...pickScoreValue(scoreValueById.get("integrity")),
       },
     },
@@ -142,7 +185,7 @@ export async function setStrategicResultProgress(
   progressPercent: number,
   progressNote = "",
 ) {
-  const declared = strategicResultById(id);
+  const declared = strategicResultById(env.worldview, id);
   if (!declared) {
     throw new Error(
       `Strategic result not declared in worldview.json: ${id}. ` +
@@ -232,26 +275,54 @@ export async function getPortfolio(env: Env) {
         WHEN 'draft' THEN 1
         ELSE 3
       END,
+      -- Deliberate order first; anything unplaced falls to the end of its
+      -- lifecycle group and stays alphabetical.
+      p.position IS NULL,
+      p.position,
       p.name`,
   ).all();
 
-  const dailyBrief = await env.DB.prepare(
-    "SELECT * FROM daily_briefs ORDER BY brief_date DESC LIMIT 1",
-  ).first();
+  const [dailyBrief, unfiled] = await Promise.all([
+    env.DB.prepare(
+      "SELECT * FROM daily_briefs ORDER BY brief_date DESC LIMIT 1",
+    ).first(),
+    // Captures filed under no project. Everything else is reachable through the
+    // project it belongs to; these would be invisible without a home.
+    env.DB.prepare(
+      `SELECT * FROM captures
+       WHERE project_id IS NULL AND status = 'inbox'
+       ORDER BY created_at DESC`,
+    ).all(),
+  ]);
 
-  return { daily_brief: dailyBrief, projects: projects.results };
+  return {
+    daily_brief: dailyBrief,
+    projects: projects.results,
+    unfiled: unfiled.results,
+  };
 }
 
 export async function saveProject(env: Env, input: SaveProjectInput) {
   const id = input.id?.trim() || slugify(input.name);
   if (!id) throw new Error("Project id or name is required");
 
+  // Same rule as recording progress: you cannot serve a result you have not
+  // declared. Null is allowed and means something — the project serves nothing
+  // declared, which is what the alignment score is there to reveal.
+  const serves = input.serves?.trim() || null;
+  if (serves && !strategicResultById(env.worldview, serves)) {
+    throw new Error(
+      `Strategic result not declared in worldview.json: ${serves}. ` +
+        `Declare it in git before pointing a project at it, or pass null.`,
+    );
+  }
+
   await env.DB.prepare(
     `INSERT INTO projects (
         id, name, description, spirit, repository, lifecycle,
         current_outcome, success_criteria, next_review, progress_percent,
-        progress_note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        progress_note, position, serves
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         description = excluded.description,
@@ -263,6 +334,13 @@ export async function saveProject(env: Env, input: SaveProjectInput) {
         next_review = excluded.next_review,
         progress_percent = excluded.progress_percent,
         progress_note = excluded.progress_note,
+        -- Order is set deliberately and rarely; omitting it from a save must
+        -- not silently unplace the project.
+        position = COALESCE(excluded.position, projects.position),
+        -- Omitting the serves key leaves the existing link alone; clearing it
+        -- has to be explicit, because silently unlinking a project would
+        -- silently move the alignment score.
+        serves = CASE WHEN ? THEN excluded.serves ELSE projects.serves END,
         updated_at = CURRENT_TIMESTAMP`,
   )
     .bind(
@@ -277,6 +355,11 @@ export async function saveProject(env: Env, input: SaveProjectInput) {
       input.next_review ?? null,
       input.progress_percent ?? null,
       input.progress_note?.trim() ?? "",
+      input.position ?? null,
+      serves,
+      // `serves: null` clears the link; `undefined` leaves it. Not `"serves" in
+      // input` — the tool layer always sets the key, sometimes to undefined.
+      input.serves === undefined ? 0 : 1,
     )
     .run();
   return getProject(env, id);

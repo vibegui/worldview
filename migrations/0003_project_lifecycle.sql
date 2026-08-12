@@ -1,12 +1,11 @@
+-- The body of this migration was edited after it had already been applied, to
+-- remove one instance's project ids. Wrangler tracks migrations by filename, so
+-- the edit is a no-op for a database that already ran it and clean for a new
+-- one. The ADD COLUMN default already places existing rows in 'active'.
+
 ALTER TABLE projects
   ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'
   CHECK (lifecycle IN ('draft', 'active', 'archived'));
-
-UPDATE projects
-SET lifecycle = CASE
-  WHEN id IN ('personal-crm', 'personal-files', 'anjo-chat') THEN 'draft'
-  ELSE 'active'
-END;
 
 DROP TABLE IF EXISTS focus_declarations;
 DROP INDEX IF EXISTS projects_mode_idx;

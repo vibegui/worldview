@@ -29,9 +29,68 @@ interface McpContextValue extends McpViewState {
 
 const McpContext = createContext<McpContextValue | null>(null);
 
+/**
+ * Standalone means this bundle is being served to a plain browser at `/` rather
+ * than read as a resource by an MCP host. The worker sets the flag when it
+ * serves the page. There is no host bridge in that case, so tool calls go over
+ * HTTP JSON-RPC to the same `/mcp` endpoint, authenticated by the session
+ * cookie — same tools, same server, one transport switch.
+ */
+const STANDALONE =
+  typeof window !== "undefined" &&
+  (window as { __STANDALONE__?: boolean }).__STANDALONE__ === true;
+
+let rpcId = 0;
+
+async function callToolOverHttp(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  const response = await fetch("/mcp", {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: (rpcId += 1),
+      method: "tools/call",
+      params: { name, arguments: args },
+    }),
+  });
+
+  if (response.status === 401) {
+    // The session expired. Reloading lands on the login form.
+    window.location.assign("/");
+    throw new Error("Session expired");
+  }
+  if (!response.ok) {
+    throw new Error(`${name} failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as {
+    error?: { message?: string };
+    result?: {
+      isError?: boolean;
+      structuredContent?: unknown;
+      content?: Array<{ type: string; text?: string }>;
+    };
+  };
+  if (payload.error) {
+    throw new Error(payload.error.message ?? `${name} returned an error`);
+  }
+  const result = payload.result;
+  if (result?.isError) {
+    const text = result.content?.find((item) => item.type === "text");
+    throw new Error(text?.text ?? `${name} returned an error`);
+  }
+  return result?.structuredContent;
+}
+
 export function McpProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<McpViewState>({
-    connected: false,
+    // No host will ever connect in standalone, so waiting for one would hang
+    // the app on its loading state forever.
+    connected: STANDALONE,
     loading: false,
   });
   const [hostContext, setHostContext] = useState<
@@ -114,7 +173,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
       name: string,
       args: Record<string, unknown> = {},
     ): Promise<T> => {
-      if (!app) throw new Error("MCP App is not connected");
+      if (!app && !STANDALONE) throw new Error("MCP App is not connected");
       setView((current) => ({
         ...current,
         loading: true,
@@ -124,22 +183,25 @@ export function McpProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        const result = await app.callServerTool({
-          name,
-          arguments: args,
-        });
-        if (result.isError) {
-          const text = result.content?.find((item) => item.type === "text");
-          throw new Error(
-            text?.type === "text" ? text.text : `${name} returned an error`,
-          );
+        let structuredContent: unknown;
+        if (app) {
+          const result = await app.callServerTool({ name, arguments: args });
+          if (result.isError) {
+            const text = result.content?.find((item) => item.type === "text");
+            throw new Error(
+              text?.type === "text" ? text.text : `${name} returned an error`,
+            );
+          }
+          structuredContent = result.structuredContent;
+        } else {
+          structuredContent = await callToolOverHttp(name, args);
         }
         setView((current) => ({
           ...current,
           loading: false,
-          toolResult: result.structuredContent,
+          toolResult: structuredContent,
         }));
-        return result.structuredContent as T;
+        return structuredContent as T;
       } catch (error) {
         setView((current) => ({
           ...current,

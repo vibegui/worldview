@@ -4,7 +4,7 @@ import type { Env } from "../src/worker/env.ts";
 
 function env(token?: string): Env {
   return {
-    MCP_PRIVATE_TOKEN: token,
+    WORLDVIEW_PASSWORD: token,
   } as Env;
 }
 

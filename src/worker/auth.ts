@@ -12,7 +12,7 @@ export function extractPrivateToken(request: Request): string | null {
   if (custom?.trim()) return custom.trim();
 
   // fallback para hosts MCP que só guardam uma URL (ex.: deco studio):
-  // https://.../mcp?token=<MCP_PRIVATE_TOKEN>
+  // https://.../mcp?token=<WORLDVIEW_PASSWORD>
   try {
     const token = new URL(request.url).searchParams.get("token");
     return token?.trim() || null;
@@ -32,7 +32,7 @@ export function timingSafeEqual(left: string, right: string): boolean {
 }
 
 export function accessForRequest(request: Request, env: Env): AccessLevel {
-  const expected = env.MCP_PRIVATE_TOKEN;
+  const expected = env.WORLDVIEW_PASSWORD;
   if (!expected) return "public";
 
   const received = extractPrivateToken(request);

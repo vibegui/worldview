@@ -1,3 +1,18 @@
 # Local-only secrets. Copy to .dev.vars and never commit the real file.
-MCP_PRIVATE_TOKEN=replace-with-a-long-random-value
-GITHUB_TOKEN=replace-with-a-classic-personal-access-token
+
+# The one credential. It is the browser password at / and the bearer token an
+# MCP client sends. With it unset the server serves the public tools only.
+WORLDVIEW_PASSWORD=demo
+
+# Optional. Read-only GitHub evidence for the hourly cron and REFRESH_GITHUB.
+GITHUB_TOKEN=
+
+# Optional, analytics module. Salts the daily visitor hash. Falls back to
+# WORLDVIEW_PASSWORD when unset, so set it if you ever rotate the password and
+# want visitor counts to stay comparable across the rotation.
+ANALYTICS_SALT=
+
+# Optional, bookmarks module. Both are required by ENRICH_BOOKMARK and nothing
+# else; leave empty and that one tool reports the missing configuration.
+MESH_GATEWAY_URL=
+MESH_API_KEY=

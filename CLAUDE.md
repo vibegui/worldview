@@ -86,13 +86,25 @@ a tool, set `access` deliberately and assume the public set is hostile input.
 A bearer token proves possession, not identity. Store it only in the private
 Studio connection.
 
-## Live infrastructure — read before touching wrangler.jsonc
+## This repo is the library, not an instance
 
-This repo deploys over an **existing** Worker holding real personal data. The
-Worker name, the D1 `database_id`, the R2 bucket, and the AutoRAG instance are
-deliberately unchanged from before the extraction so this is a drop-in
-replacement. **Renaming any of them is a migration, not a rename** — it orphans
-the data or breaks the owner's Studio connection. Do not do it as a cleanup.
+Worldview is the generic tool. A person's declaration, content, bindings, and
+secrets live in *their* repo, which consumes this one. The first instance is
+`vibegui.com/worldview/`.
+
+That means this repo owns its own throwaway Cloudflare resources — worker
+`worldview`, D1 `worldview`, no `database_id` committed — so it can be deployed
+and demoed freely. **The instance's live infrastructure is a different thing and
+is off limits:** worker `vibegui-personal-ai-os`, D1
+`503776b2-1c54-481d-85a4-a99e8028c72d`, R2 `vibegui-corpus`, AI Search
+`vibegui-writing`, the custom domain `mcp.vibegui.com`, and the `ui://vibegui/*`
+resource URIs pinned by a Studio connection. Renaming any of those is a
+migration with a data-movement plan, never a cleanup. Do not confuse the two —
+until recently both repos claimed the same database.
+
+Resource URIs derive from the declaration's `instance` slug, so an instance that
+declares `"instance": "vibegui"` reproduces its pinned `ui://vibegui/*` exactly.
+Changing how they are derived breaks live views.
 
 ## Rules
 
@@ -100,11 +112,17 @@ the data or breaks the owner's Studio connection. Do not do it as a cleanup.
   artifact. No data? Instrument first, conclude later.
 - **Migrations are additive.** D1 has no down-migrations here. Remap and keep
   history rather than dropping rows; the eleven old scorecard items are the
-  precedent.
+  precedent. Wrangler tracks migrations by **filename, not content**, so editing
+  an already-applied body is a no-op for instances that ran it — that is how the
+  owner's seed data was removed from `0003`/`0004` without touching live rows.
+  Never add a migration that deletes declaration or progress data; it would run
+  against real databases.
 - **GitHub is read-only.** Never claim to have changed an external project.
 - **Persist only durable information.** Routine conversation is not memory.
 - **Project lifecycle is explicit:** draft, active, archived. Do not invent
-  priority labels.
+  priority labels — no high/medium/low, no urgency tiers, no computed score
+  standing in for a judgement. `projects.position` is not an exception: it is an
+  order the owner sets deliberately, not a category the system assigns.
 - **Activity is evidence of attention, never measured hours.**
 - Keep `bun run check` and `bun test` green. Non-trivial logic leaves one
   runnable check behind — see `tests/worldview.test.ts` for the shape.

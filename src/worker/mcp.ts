@@ -1,6 +1,6 @@
 import type { AccessLevel, Env } from "./env.ts";
 import { MCP_APP_MIME, readResource, resourcesForAccess } from "./resources.ts";
-import { toolByName, toolsForAccess } from "./tools.ts";
+import { toolsForAccess } from "./tools.ts";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -76,7 +76,7 @@ export async function dispatchMcp(
 
     case "tools/list":
       return {
-        tools: toolsForAccess(access).map((tool) => ({
+        tools: toolsForAccess(env, access).map((tool) => ({
           name: tool.name,
           description: tool.description,
           inputSchema: tool.inputSchema,
@@ -94,8 +94,13 @@ export async function dispatchMcp(
           : {};
       if (!name) throw rpcErrorValue(-32602, "Missing tool name");
 
-      const tool = toolByName[name];
-      if (!tool || (tool.access === "private" && access !== "private")) {
+      // Re-checked on call, not just filtered from the list: guessing a name
+      // must not reach a tool the caller cannot see. The same lookup covers a
+      // module this instance never configured.
+      const tool = toolsForAccess(env, access).find(
+        (candidate) => candidate.name === name,
+      );
+      if (!tool) {
         throw rpcErrorValue(-32601, `Unknown tool: ${name}`);
       }
 
@@ -126,7 +131,7 @@ export async function dispatchMcp(
       const uri = typeof params.uri === "string" ? params.uri : undefined;
       if (!uri) throw rpcErrorValue(-32602, "Missing resource uri");
 
-      const result = readResource(uri, access);
+      const result = readResource(env, uri, access);
       if (!result) {
         throw rpcErrorValue(-32601, `Unknown resource: ${uri}`);
       }
