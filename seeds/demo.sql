@@ -12,76 +12,32 @@
 -- Clear it with `bun run demo:reset`.
 
 ------------------------------------------------------------------- projects
--- Never DELETE a project: it cascades into decisions, whose immutability
--- trigger aborts the delete. Upsert instead.
--- `serves` names the declared strategic result each project pursues, and is what
--- the alignment score counts. demo-files deliberately serves nothing: a project
--- with no declared outcome is a real situation, and a demo where alignment is
--- 100% would be a demo of a score that never says anything.
-INSERT INTO projects
-  (id, name, description, spirit, repository, lifecycle,
-   current_outcome, success_criteria, next_review,
-   progress_percent, progress_note, position, serves, updated_at)
+-- State only. What a project *is* — name, outcome, success criteria, and which
+-- strategic results it serves — is declared in projects/*.md and joined in by
+-- id. A row here is the measurement of a project, not the project.
+--
+-- ids must match the files: worldview-os, atlas, library, newsletter, files.
+INSERT INTO projects (id, name, lifecycle, next_review, progress_percent, progress_note, position, updated_at)
 VALUES
-  ('demo-worldview', 'Worldview OS',
-   'The scorekeeper: declaration in git, measurement in D1, two scores.',
-   'A scorekeeper with no hands.',
-   'https://github.com/example/worldview', 'active',
-   'One person who is not me runs their own deployment.',
-   'A stranger reaches a useful first brief from the documentation alone.',
-   date('now', '+3 days'), 55,
+  ('worldview-os', 'Worldview OS', 'active', date('now', '+3 days'), 55,
    'Standalone deployment and browser access work; nobody outside has deployed it yet.',
-   1, 'agency', CURRENT_TIMESTAMP),
-  ('demo-atlas', 'Atlas',
-   'The distinction graph: essays, sources, and guided paths that actually land.',
-   'A method nobody can copy is a hobby.',
-   'https://github.com/example/atlas', 'active',
-   'Twelve distinctions have an essay, a graph position, and a guided path.',
-   'Readers complete real guided conversations.',
-   date('now', '+9 days'), 20,
+   1, CURRENT_TIMESTAMP),
+  ('atlas', 'Atlas', 'active', date('now', '+9 days'), 20,
    'Corpus and retrieval exist. The graph does not. Four essays drafted, none placed.',
-   2, 'understanding', CURRENT_TIMESTAMP),
-  ('demo-library', 'Library',
-   'Books and primary sources mapped to the concepts they actually changed.',
-   'A pile of content is not a library.',
-   NULL, 'active',
-   'Twenty sources mapped with provenance.',
-   'Conversation signals enter a private review pipeline.',
-   NULL, 15,
+   2, CURRENT_TIMESTAMP),
+  ('library', 'Library', 'active', NULL, 15,
    'Import works. Nothing is mapped to a concept yet.',
-   3, 'compounding', datetime('now', '-41 days')),
-  -- Active, real, and pointed at nothing declared. This is the row that keeps
-  -- alignment honest, and the one worth a decision: declare a result for it,
-  -- fold it into another project, or archive it.
-  ('demo-newsletter', 'Newsletter',
-   'A weekly letter that started as an experiment and never stopped.',
-   'It grew without ever being declared.',
-   NULL, 'active',
-   'Ship an issue every Tuesday.',
-   'Unclear. That is the finding.',
-   date('now', '+1 days'), 60,
+   3, datetime('now', '-41 days')),
+  ('newsletter', 'Newsletter', 'active', date('now', '+1 days'), 60,
    'Running for months and serving no declared result. Either it earns one or it ends.',
-   4, NULL, datetime('now', '-2 days')),
-  ('demo-files', 'Files',
-   'Mac, iCloud, and Drive searchable as one private map.',
-   'Reversible or it does not ship.',
-   NULL, 'draft',
-   'Three storage sources indexed, every operation with a dry run.',
-   '', date('now', '+24 days'), NULL, '',
-   5, 'order', CURRENT_TIMESTAMP)
+   4, datetime('now', '-2 days')),
+  ('files', 'Files', 'draft', date('now', '+24 days'), NULL, '', 5, CURRENT_TIMESTAMP)
 ON CONFLICT(id) DO UPDATE SET
-  name = excluded.name,
-  description = excluded.description,
-  spirit = excluded.spirit,
-  repository = excluded.repository,
   lifecycle = excluded.lifecycle,
-  current_outcome = excluded.current_outcome,
-  success_criteria = excluded.success_criteria,
   next_review = excluded.next_review,
   progress_percent = excluded.progress_percent,
   progress_note = excluded.progress_note,
   position = excluded.position,
-  serves = excluded.serves,
   updated_at = excluded.updated_at;
 
 ------------------------------------------------------------------- goals
@@ -90,37 +46,37 @@ INSERT INTO goals
   (id, project_id, title, desired_outcome, success_criteria,
    horizon, status, current_assessment, next_review)
 VALUES
-  ('demo-goal-browser', 'demo-worldview', 'Reach it from anywhere with a password',
+  ('demo-goal-browser', 'worldview-os', 'Reach it from anywhere with a password',
    'A person opens the deployment in a browser, types one password, and sees their declaration.',
    'Works on a phone, on a laptop, and inside an MCP host, from the same URL.',
    'this week', 'active',
    'Login and the standalone UI are in. Not yet deployed to a public hostname.',
    date('now', '+2 days')),
-  ('demo-goal-firstuser', 'demo-worldview', 'One deployment that is not mine',
+  ('demo-goal-firstuser', 'worldview-os', 'One deployment that is not mine',
    'Someone else writes their own declaration and connects it.',
    'They get to a useful first daily brief from the documentation alone.',
    'this quarter', 'active',
    'The library boundary is drawn but not extracted. No external deployment exists.',
    date('now', '+16 days')),
-  ('demo-goal-twelve', 'demo-atlas', 'Twelve distinctions placed in the graph',
+  ('demo-goal-twelve', 'atlas', 'Twelve distinctions placed in the graph',
    'Each distinction has an essay, a position, sources, and one guided path.',
    'A reader can walk a path and report what changed.',
    'this quarter', 'active',
    'Four essays drafted, zero placed. The graph schema is still a sketch.',
    date('now', '+12 days')),
-  ('demo-goal-paths', 'demo-atlas', 'One guided path that repeatably lands',
+  ('demo-goal-paths', 'atlas', 'One guided path that repeatably lands',
    'A path that produces the same shift in more than one reader.',
    'Two readers independently report getting it.',
    'this quarter', 'active',
    'Not started. Blocked on the graph.',
    NULL),
-  ('demo-goal-map', 'demo-library', 'Twenty sources mapped',
+  ('demo-goal-map', 'library', 'Twenty sources mapped',
    'Books and primary sources connected to the concepts they changed.',
    'Every mapped source names the distinction it moved.',
    'this month', 'active',
    'Zero mapped. This is the promise that has slipped twice.',
    date('now', '-4 days')),
-  ('demo-goal-review', 'demo-library', 'A review pipeline for conversation signals',
+  ('demo-goal-review', 'library', 'A review pipeline for conversation signals',
    'What was unclear in a conversation becomes a reviewable item, not a memory.',
    'No model output becomes public truth without review.',
    'this month', 'active',
@@ -148,10 +104,10 @@ VALUES
   ('demo-mem-evidence', NULL, 'preference',
    'Never invent numbers. If there is no query behind a claim, instrument first and conclude later.',
    'declaration', 1, 'active', datetime('now', '-33 days')),
-  ('demo-mem-scope', 'demo-atlas', 'observation',
+  ('demo-mem-scope', 'atlas', 'observation',
    'Every attempt to design the graph schema before writing four essays has failed. The essays are what reveal the edges.',
    'retro', 0.8, 'active', datetime('now', '-11 days')),
-  ('demo-mem-slip', 'demo-library', 'observation',
+  ('demo-mem-slip', 'library', 'observation',
    'The source-mapping goal has slipped twice, both times to Atlas work. That is a real priority, and pretending otherwise is the only mistake.',
    'retro', 0.9, 'active', datetime('now', '-6 days'));
 
@@ -161,19 +117,19 @@ VALUES
 INSERT OR IGNORE INTO decisions
   (id, project_id, title, decision, rationale, source, decided_at)
 VALUES
-  ('demo-dec-nohands', 'demo-worldview', 'Worldview never executes',
+  ('demo-dec-nohands', 'worldview-os', 'Worldview never executes',
    'No tool in this system takes an action with a consequence. Execution belongs to whatever factory connects to it.',
    'A scorekeeper with hands cannot be trusted to keep score, and it is what makes one deployment safe to connect to several factories at once.',
    'demo', datetime('now', '-28 days')),
-  ('demo-dec-twoscores', 'demo-worldview', 'Two scores, never a third',
+  ('demo-dec-twoscores', 'worldview-os', 'Two scores, never a third',
    'Alignment and integrity only. Everything else is a diagnostic beneath one of them.',
    'Eleven scorecard items were eleven ways to avoid answering the two questions that matter.',
    'demo', datetime('now', '-22 days')),
-  ('demo-dec-standalone', 'demo-worldview', 'Own worker, own database',
+  ('demo-dec-standalone', 'worldview-os', 'Own worker, own database',
    'Stop deploying over the instance worker. The library gets throwaway resources so it can be demoed freely.',
    'Two repositories claiming one D1 is not a configuration problem, it is a data-loss problem waiting for a deploy.',
    'demo', datetime('now', '-2 days')),
-  ('demo-dec-essaysfirst', 'demo-atlas', 'Write four essays before designing the graph',
+  ('demo-dec-essaysfirst', 'atlas', 'Write four essays before designing the graph',
    'Draft the essays first and let the edges fall out of them.',
    'Three schema attempts died without an essay to test them against.',
    'demo', datetime('now', '-13 days'));
@@ -182,16 +138,16 @@ VALUES
 DELETE FROM captures WHERE id LIKE 'demo-%';
 INSERT INTO captures (id, project_id, kind, content, source, status, created_at)
 VALUES
-  ('demo-cap-1', 'demo-worldview', 'task',
+  ('demo-cap-1', 'worldview-os', 'task',
    'The library extraction promise made to the instance repo is past its by-when and unacknowledged.',
    'demo', 'inbox', datetime('now', '-5 days')),
-  ('demo-cap-2', 'demo-library', 'task',
+  ('demo-cap-2', 'library', 'task',
    'Twenty mapped sources was promised for last week. Not done, not honored.',
    'demo', 'inbox', datetime('now', '-4 days')),
-  ('demo-cap-3', 'demo-atlas', 'distinction',
+  ('demo-cap-3', 'atlas', 'distinction',
    'Integrity as wholeness rather than morality. A wheel with every spoke, not a virtue.',
    'demo', 'inbox', datetime('now', '-2 days')),
-  ('demo-cap-4', 'demo-worldview', 'idea',
+  ('demo-cap-4', 'worldview-os', 'idea',
    'Alignment could be computed rather than asserted: share of projects whose success_criteria names a declared result.',
    'demo', 'inbox', datetime('now', '-8 days')),
   ('demo-cap-5', NULL, 'source',
@@ -208,21 +164,21 @@ DELETE FROM activity_events WHERE id LIKE 'demo-%';
 INSERT INTO activity_events
   (id, project_id, source, kind, summary, url, confidence, occurred_at)
 VALUES
-  ('demo-act-1', 'demo-worldview', 'github', 'push', '4 commits to example/worldview',
+  ('demo-act-1', 'worldview-os', 'github', 'push', '4 commits to example/worldview',
    'https://github.com/example/worldview/commits/main', 1, datetime('now', '-1 days')),
-  ('demo-act-2', 'demo-worldview', 'github', 'pull_request', 'Opened #12 browser session',
+  ('demo-act-2', 'worldview-os', 'github', 'pull_request', 'Opened #12 browser session',
    'https://github.com/example/worldview/pull/12', 1, datetime('now', '-2 days')),
-  ('demo-act-3', 'demo-worldview', 'github', 'issue', 'Closed #9 declaration fetch is load-bearing',
+  ('demo-act-3', 'worldview-os', 'github', 'issue', 'Closed #9 declaration fetch is load-bearing',
    'https://github.com/example/worldview/issues/9', 1, datetime('now', '-3 days')),
-  ('demo-act-4', 'demo-worldview', 'github', 'push', '2 commits to example/worldview',
+  ('demo-act-4', 'worldview-os', 'github', 'push', '2 commits to example/worldview',
    'https://github.com/example/worldview/commits/main', 1, datetime('now', '-6 days')),
-  ('demo-act-5', 'demo-atlas', 'github', 'push', '1 commit to example/atlas',
+  ('demo-act-5', 'atlas', 'github', 'push', '1 commit to example/atlas',
    'https://github.com/example/atlas/commits/main', 1, datetime('now', '-4 days')),
-  ('demo-act-6', 'demo-atlas', 'notes', 'session', 'Drafted the fourth essay',
+  ('demo-act-6', 'atlas', 'notes', 'session', 'Drafted the fourth essay',
    NULL, 0.7, datetime('now', '-9 days')),
-  ('demo-act-7', 'demo-worldview', 'github', 'issue', 'Opened #13 seed data leaks into forks',
+  ('demo-act-7', 'worldview-os', 'github', 'issue', 'Opened #13 seed data leaks into forks',
    'https://github.com/example/worldview/issues/13', 1, datetime('now', '-5 days')),
-  ('demo-act-8', 'demo-atlas', 'notes', 'session', 'Mapped three distinctions on paper',
+  ('demo-act-8', 'atlas', 'notes', 'session', 'Mapped three distinctions on paper',
    NULL, 0.6, datetime('now', '-16 days'));
 
 ------------------------------------------------------------------- work items
@@ -231,23 +187,23 @@ INSERT INTO work_items
   (id, project_id, source, kind, number, title, state, url, author, labels,
    created_at, updated_at)
 VALUES
-  ('demo-wi-12', 'demo-worldview', 'github', 'pull_request', 12,
+  ('demo-wi-12', 'worldview-os', 'github', 'pull_request', 12,
    'Browser session: password login and the standalone UI', 'open',
    'https://github.com/example/worldview/pull/12', 'demo-owner',
    '["standalone"]', datetime('now', '-2 days'), datetime('now', '-1 days')),
-  ('demo-wi-13', 'demo-worldview', 'github', 'issue', 13,
+  ('demo-wi-13', 'worldview-os', 'github', 'issue', 13,
    'Seed data leaks one instance''s declaration into every fresh database', 'open',
    'https://github.com/example/worldview/issues/13', 'demo-owner',
    '["bug","migrations"]', datetime('now', '-5 days'), datetime('now', '-2 days')),
-  ('demo-wi-14', 'demo-worldview', 'issue', 'issue', 14,
+  ('demo-wi-14', 'worldview-os', 'issue', 'issue', 14,
    'Draw the library boundary so an instance is three files', 'open',
    'https://github.com/example/worldview/issues/14', 'demo-owner',
    '["library","promised"]', datetime('now', '-11 days'), datetime('now', '-5 days')),
-  ('demo-wi-9', 'demo-worldview', 'github', 'issue', 9,
+  ('demo-wi-9', 'worldview-os', 'github', 'issue', 9,
    'GET_DECLARATION fails when DECLARATION.md is absent', 'closed',
    'https://github.com/example/worldview/issues/9', 'demo-owner',
    '["bug"]', datetime('now', '-12 days'), datetime('now', '-3 days')),
-  ('demo-wi-31', 'demo-atlas', 'github', 'issue', 31,
+  ('demo-wi-31', 'atlas', 'github', 'issue', 31,
    'Graph schema: derive edges from the drafted essays', 'open',
    'https://github.com/example/atlas/issues/31', 'demo-owner',
    '["design"]', datetime('now', '-14 days'), datetime('now', '-4 days'));

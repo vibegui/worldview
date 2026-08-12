@@ -1,3 +1,4 @@
+import type { DeclaredProject } from "../core/projects.ts";
 import type { Worldview, WorldviewInput } from "../core/worldview.ts";
 
 /**
@@ -10,6 +11,11 @@ import type { Worldview, WorldviewInput } from "../core/worldview.ts";
  * there, because it advertises a capability it cannot honour.
  */
 export interface WorldviewConfig extends WorldviewInput {
+  /**
+   * Raw contents of the instance's `projects/*.md`, one string each. The library
+   * parses them: an instance holds configuration and content, never an `if`.
+   */
+  projects?: string[];
   /**
    * Published writing as prior art: "have I already said this?". Omit and the
    * three public writing tools do not exist.
@@ -34,8 +40,11 @@ export interface WorldviewConfig extends WorldviewInput {
 }
 
 /** The config after validation, with the declaration merged and prose resolved. */
-export interface ResolvedConfig extends Omit<WorldviewConfig, "declaration"> {
+export interface ResolvedConfig
+  extends Omit<WorldviewConfig, "declaration" | "projects"> {
   worldview: Worldview;
+  /** Declared projects, already parsed. */
+  projects: DeclaredProject[];
 }
 
 export interface Env extends ResolvedConfig {

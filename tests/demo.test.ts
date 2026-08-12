@@ -3,10 +3,19 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { worldviewErrors } from "../src/core/worldview.ts";
+import { parseProjects, projectErrors } from "../src/core/projects.ts";
 import declarationJson from "../worldview.json" with { type: "json" };
 import { resolveWorldview } from "../src/core/worldview.ts";
 
 const worldview = resolveWorldview({ declaration: declarationJson });
+
+const projects = parseProjects(
+  readdirSync(join(import.meta.dir, "..", "projects"))
+    .filter((file) => file.endsWith(".md"))
+    .map((file) =>
+      readFileSync(join(import.meta.dir, "..", "projects", file), "utf8"),
+    ),
+);
 
 
 const root = join(import.meta.dir, "..");
@@ -68,36 +77,53 @@ describe("the demo seed", () => {
     expect(seeded).toEqual(declared);
   });
 
-  test("points every served project at a result declared in git", () => {
-    // The link has no foreign key — the declaration lives in git, so nothing in
-    // SQLite can enforce this. That makes it exactly the thing a test must hold.
+  test("points every declared project at a result declared in git", () => {
+    // Nothing in SQLite can enforce this: `serves` lives in the instance's
+    // markdown and the results live in worldview.json. Two git files that must
+    // agree, with no foreign key between them, is exactly what a test is for.
     const declared = new Set(worldview.strategicResults.map((r: { id: string }) => r.id));
-    const served = db
-      .query("SELECT DISTINCT serves FROM projects WHERE serves IS NOT NULL")
-      .all()
-      .map((row) => (row as { serves: string }).serves);
+    expect(projects.length).toBeGreaterThan(0);
+    expect(projectErrors(projects, [...declared])).toEqual([]);
+  });
 
-    expect(served.length).toBeGreaterThan(0);
-    for (const id of served) {
-      expect(declared.has(id), `${id} is not declared in worldview.json`).toBe(
-        true,
-      );
+  test("every project row in D1 belongs to a project declared in git", () => {
+    // State about a project that does not exist is not information.
+    const ids = new Set(projects.map((p) => p.id));
+    const rows = db
+      .query("SELECT id FROM projects")
+      .all()
+      .map((row) => (row as { id: string }).id);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const id of rows) {
+      expect(ids.has(id), `D1 has state for undeclared project ${id}`).toBe(true);
     }
   });
 
   test("leaves one active project serving nothing, so alignment can speak", () => {
-    const { active, serving } = db
-      .query(
-        `SELECT COUNT(*) AS active, COUNT(serves) AS serving
-         FROM projects WHERE lifecycle = 'active'`,
-      )
-      .get() as { active: number; serving: number };
+    const lifecycles = new Map(
+      db
+        .query("SELECT id, lifecycle FROM projects")
+        .all()
+        .map((row) => {
+          const r = row as { id: string; lifecycle: string };
+          return [r.id, r.lifecycle] as const;
+        }),
+    );
+    const active = projects.filter(
+      (p) => (lifecycles.get(p.id) ?? p.initialLifecycle) === "active",
+    );
+    const serving = active.filter((p) => p.serves.length > 0);
 
-    expect(active).toBeGreaterThan(0);
+    expect(active.length).toBeGreaterThan(0);
     // A demo where every project is aligned demonstrates a score that never
     // says anything.
-    expect(serving).toBeLessThan(active);
-    expect(Math.round((serving / active) * 100)).toBeLessThan(100);
+    expect(serving.length).toBeLessThan(active.length);
+  });
+
+  test("declares at least one many-to-many project", () => {
+    // A single TEXT column could not express this, which is why `serves` moved
+    // to git rather than staying a column.
+    expect(projects.some((p) => p.serves.length > 1)).toBe(true);
   });
 
   test("keeps integrity a count to zero, never a percentage", () => {
@@ -192,5 +218,26 @@ describe("the demo seed", () => {
         `${table} duplicated on a second seed`,
       ).toBe(count(once, `SELECT COUNT(*) n FROM ${table}`));
     }
+  });
+});
+
+describe("project markdown", () => {
+  test("reads every section, including the last one in the file", () => {
+    // `## Success criteria` is last in these files, which is exactly the case a
+    // regex terminator gets wrong: it returned nothing until the end-of-string
+    // lookahead was correct, and nothing looks the same as "not written yet".
+    for (const project of projects) {
+      expect(project.outcome, `${project.id} has no declared outcome`).not.toBe(
+        "",
+      );
+      expect(
+        project.successCriteria.length,
+        `${project.id} has no success criteria`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  test("ignores a file with no frontmatter instead of throwing", () => {
+    expect(parseProjects(["# Just notes\n\nno frontmatter here"])).toEqual([]);
   });
 });

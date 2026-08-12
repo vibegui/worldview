@@ -18,6 +18,7 @@
  * change should be reviewable, applying invisible schema is the wrong default.
  */
 
+import { parseProjects } from "./core/projects.ts";
 import { resolveWorldview } from "./core/worldview.ts";
 import type { Env, WorldviewConfig } from "./worker/env.ts";
 import { createWorker } from "./worker/index.ts";
@@ -33,6 +34,7 @@ export function createWorldview(
   // `worldviewErrors()` from `check` and `test`, where loud is free.
   return createWorker({
     worldview,
+    projects: parseProjects(config.projects),
     publicWriting: config.publicWriting,
     bookmarks: config.bookmarks,
     analytics: config.analytics,
@@ -40,6 +42,8 @@ export function createWorldview(
 }
 
 export { worldviewErrors, resolveWorldview } from "./core/worldview.ts";
+export { parseProject, parseProjects, projectErrors } from "./core/projects.ts";
+export type { DeclaredProject } from "./core/projects.ts";
 export type {
   Worldview,
   WorldviewDeclaration,

@@ -44,7 +44,7 @@ function env(strategicRows: Row[], scorecardRows: Row[]): Env {
   };
   // The declaration arrives on env, the way an instance's config does — the
   // library never reads it from disk.
-  return { DB: db, worldview } as unknown as Env;
+  return { DB: db, worldview, projects: [] } as unknown as Env;
 }
 
 describe("declaration: git structure joined with D1 measurement", () => {

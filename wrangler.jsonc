@@ -11,6 +11,16 @@
     "GITHUB_USERNAME": "",
     "AUTORAG_INSTANCE": "worldview-writing"
   },
+  // Project declarations are markdown, imported as text. The instance owns these
+  // files, so the rule lives in the instance's config — the library never
+  // reaches for them.
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.md"],
+      "fallthrough": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

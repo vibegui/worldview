@@ -1,20 +1,21 @@
--- The missing edge: which declared strategic result a project pursues.
+-- Superseded before it was ever read.
 --
--- Until now projects and strategic results were two unrelated tables. The only
--- link was prose inside success_criteria, which meant alignment — "share of
--- active work traceable to a declared outcome" — could not be derived and was
--- typed in by hand. A score nobody can open is exactly what the objects domain
--- of integrity says should not exist.
+-- This migration added a `serves` column to projects, so a project could name
+-- the strategic result it pursues. The relationship was right; the home was
+-- wrong. `serves` is a declaration about intent — what a project is *for* — and
+-- intent belongs in the instance's git alongside the strategic results it
+-- points at, not in the table that holds measurement.
 --
--- No foreign key on purpose. The declaration lives in git, so a declared result
--- may legitimately have no row in strategic_results yet (it reads 0% until one
--- exists). Validation happens on write against worldview.json, the same rule
--- that makes SET_STRATEGIC_RESULT_PROGRESS reject an undeclared id.
+-- It now lives in `projects/*.md` frontmatter, where it is also many-to-many,
+-- which a single TEXT column could not express and which is the common case:
+-- real work usually serves more than one result.
 --
--- NULL is a meaningful value, not missing data: a project serving nothing
--- declared is the alignment score working.
+-- The body is emptied rather than the file deleted, and no DROP COLUMN is
+-- issued. Wrangler tracks migrations by filename, so a database that already
+-- applied this keeps its (unused, always-null) column and a fresh one never
+-- gets it. Dropping it would rewrite the table on live data to reclaim nothing.
+--
+-- See migrations/0008 for `position`, which stays in D1: order is state you
+-- flip week to week, not a declaration.
 
-ALTER TABLE projects ADD COLUMN serves TEXT;
-
-CREATE INDEX IF NOT EXISTS projects_serves_idx
-  ON projects(serves, lifecycle);
+SELECT 1;

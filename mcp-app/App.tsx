@@ -256,9 +256,13 @@ function PortfolioView({
                 {/* The declared result this project pursues. Saying so when
                     there is none is the point — that project is why alignment
                     is not 100%. */}
-                <p className={`serves ${project.serves ? "" : "none"}`}>
-                  {project.serves
-                    ? `Serves · ${resultTitles[text(project.serves)] ?? text(project.serves)}`
+                <p
+                  className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
+                >
+                  {asStrings(project.serves).length
+                    ? `Serves · ${asStrings(project.serves)
+                        .map((id) => resultTitles[id] ?? id)
+                        .join(" · ")}`
                     : "Serves nothing declared"}
                 </p>
                 <p className="spirit">

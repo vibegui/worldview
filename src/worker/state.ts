@@ -14,26 +14,16 @@ type MemoryKind =
   | "lesson"
   | "reflection";
 
-export interface SaveProjectInput {
-  id?: string;
-  name: string;
-  description?: string;
-  spirit?: string;
-  repository?: string | null;
+/**
+ * The writable half of a project. Everything else — name, outcome, success
+ * criteria, `serves` — is declared in the instance's git and cannot be set here.
+ */
+export interface SetProjectStateInput {
+  id: string;
   lifecycle?: ProjectLifecycle;
-  current_outcome?: string;
-  success_criteria?: string;
   next_review?: string | null;
-  progress_percent?: number | null;
-  progress_note?: string;
   /** Deliberate order within the lifecycle group. Unset sorts last, by name. */
   position?: number | null;
-  /**
-   * Id of the declared strategic result this project pursues, or null for none.
-   * Validated against worldview.json. Omit the key to leave an existing link
-   * untouched; pass null to clear it.
-   */
-  serves?: string | null;
 }
 
 export interface CreateGoalInput {
@@ -77,7 +67,7 @@ export interface RememberInput {
  * simply reads as 0% — no migration needed to add one.
  */
 export async function getDeclarationDashboard(env: Env) {
-  const [progressRows, scorecard, alignmentRow, servedCounts] =
+  const [progressRows, scorecard, lifecycleRows] =
     await Promise.all([
       env.DB.prepare(
         "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
@@ -85,29 +75,39 @@ export async function getDeclarationDashboard(env: Env) {
       env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
         Record<string, unknown>
       >(),
-      // Alignment is derived, never asserted: the share of active projects that
-      // name a declared strategic result. Every number here comes from this
-      // query, so the score opens.
-      env.DB.prepare(
-        `SELECT COUNT(*) AS active, COUNT(serves) AS serving
-         FROM projects WHERE lifecycle = 'active'`,
-      ).first<{ active: number; serving: number }>(),
-      env.DB.prepare(
-        `SELECT serves, COUNT(*) AS n FROM projects
-         WHERE lifecycle = 'active' AND serves IS NOT NULL
-         GROUP BY serves`,
-      ).all<{ serves: string; n: number }>(),
+      env.DB.prepare("SELECT id, lifecycle FROM projects").all<{
+        id: string;
+        lifecycle: string;
+      }>(),
     ]);
+
+  // Alignment is derived, never asserted: the share of active projects that
+  // serve at least one declared strategic result. `serves` comes from git and
+  // `lifecycle` from D1, so the score is the join of intent and state — which is
+  // the only thing it could honestly be.
+  const lifecycleById = new Map(
+    lifecycleRows.results.map((row) => [row.id, row.lifecycle]),
+  );
+  const activeProjects = env.projects.filter(
+    (project) =>
+      (lifecycleById.get(project.id) ?? project.initialLifecycle ?? "draft") ===
+      "active",
+  );
+  const projectsByResult = new Map<string, number>();
+  for (const project of activeProjects) {
+    for (const result of project.serves) {
+      projectsByResult.set(result, (projectsByResult.get(result) ?? 0) + 1);
+    }
+  }
 
   const progressById = new Map(
     progressRows.results.map((row) => [String(row.id), row]),
   );
-  const projectsByResult = new Map(
-    servedCounts.results.map((row) => [row.serves, Number(row.n)]),
-  );
 
-  const active = Number(alignmentRow?.active ?? 0);
-  const serving = Number(alignmentRow?.serving ?? 0);
+  const active = activeProjects.length;
+  const serving = activeProjects.filter(
+    (project) => project.serves.length > 0,
+  ).length;
   // No active projects is not zero alignment — it is nothing to measure. A share
   // of nothing is not a number, and inventing one would be inventing a number.
   const alignmentValue = active > 0 ? Math.round((serving / active) * 100) : null;
@@ -260,27 +260,67 @@ export async function updateScorecardItem(
     .first();
 }
 
+/**
+ * The portfolio: structure from git, state from D1, joined by id.
+ *
+ * Same seam as the declaration, one level down. A project declared in git with
+ * no D1 row reads as its initial lifecycle at 0% and needs no migration; a D1
+ * row for a project nobody declared is dropped, because state about a project
+ * that does not exist is not information.
+ */
 export async function getPortfolio(env: Env) {
-  const projects = await env.DB.prepare(
+  const stateRows = await env.DB.prepare(
     `SELECT
       p.*,
       (SELECT COUNT(*) FROM goals g WHERE g.project_id = p.id AND g.status = 'active') AS active_goal_count,
       (SELECT MAX(a.occurred_at) FROM activity_events a WHERE a.project_id = p.id) AS last_activity_at,
       (SELECT COUNT(*) FROM captures c WHERE c.project_id = p.id AND c.status = 'inbox') AS inbox_count,
       (SELECT COUNT(*) FROM work_items w WHERE w.project_id = p.id AND w.state = 'open') AS open_work_item_count
-    FROM projects p
-    ORDER BY
-      CASE p.lifecycle
-        WHEN 'active' THEN 0
-        WHEN 'draft' THEN 1
-        ELSE 3
-      END,
-      -- Deliberate order first; anything unplaced falls to the end of its
-      -- lifecycle group and stays alphabetical.
-      p.position IS NULL,
-      p.position,
-      p.name`,
-  ).all();
+    FROM projects p`,
+  ).all<Record<string, unknown>>();
+
+  const stateById = new Map(
+    stateRows.results.map((row) => [String(row.id), row]),
+  );
+  const rank: Record<string, number> = { active: 0, draft: 1, archived: 3 };
+
+  const projects = env.projects
+    .map((declared) => {
+      const state = stateById.get(declared.id);
+      const lifecycle = String(
+        state?.lifecycle ?? declared.initialLifecycle ?? "draft",
+      );
+      return {
+        id: declared.id,
+        name: declared.name,
+        repository: declared.repo ?? null,
+        spirit: declared.spirit,
+        current_outcome: declared.outcome,
+        success_criteria: declared.successCriteria,
+        // Many-to-many: real work serves more than one result, and forcing a
+        // single choice would make alignment lie by omission.
+        serves: declared.serves,
+        lifecycle,
+        position: state?.position ?? null,
+        next_review: state?.next_review ?? declared.initialNextReview ?? null,
+        progress_percent: state?.progress_percent ?? null,
+        progress_note: String(state?.progress_note ?? ""),
+        active_goal_count: Number(state?.active_goal_count ?? 0),
+        inbox_count: Number(state?.inbox_count ?? 0),
+        open_work_item_count: Number(state?.open_work_item_count ?? 0),
+        last_activity_at: state?.last_activity_at ?? null,
+        updated_at: state?.updated_at ?? null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        (rank[a.lifecycle] ?? 2) - (rank[b.lifecycle] ?? 2) ||
+        // Deliberate order first; anything unplaced falls to the end of its
+        // lifecycle group and stays alphabetical.
+        (a.position === null ? 1 : 0) - (b.position === null ? 1 : 0) ||
+        Number(a.position ?? 0) - Number(b.position ?? 0) ||
+        a.name.localeCompare(b.name),
+    );
 
   const [dailyBrief, unfiled] = await Promise.all([
     env.DB.prepare(
@@ -297,72 +337,55 @@ export async function getPortfolio(env: Env) {
 
   return {
     daily_brief: dailyBrief,
-    projects: projects.results,
+    projects,
     unfiled: unfiled.results,
   };
 }
 
-export async function saveProject(env: Env, input: SaveProjectInput) {
-  const id = input.id?.trim() || slugify(input.name);
-  if (!id) throw new Error("Project id or name is required");
-
-  // Same rule as recording progress: you cannot serve a result you have not
-  // declared. Null is allowed and means something — the project serves nothing
-  // declared, which is what the alignment score is there to reveal.
-  const serves = input.serves?.trim() || null;
-  if (serves && !strategicResultById(env.worldview, serves)) {
+/**
+ * Set the state of a project the instance already declared in git.
+ *
+ * This replaced SAVE_PROJECT, which could bring a project into existence from a
+ * conversation. It no longer can: what a project *is* — its name, the outcome it
+ * declares, what would count as success, and which results it serves — is intent,
+ * and changing intent is a commit in the instance's repo. What this writes is
+ * only what you flip week to week.
+ *
+ * An id nobody declared is rejected for the same reason an undeclared strategic
+ * result is: state about something that does not exist is not information.
+ */
+export async function setProjectState(env: Env, input: SetProjectStateInput) {
+  const declared = env.projects.find((project) => project.id === input.id);
+  if (!declared) {
     throw new Error(
-      `Strategic result not declared in worldview.json: ${serves}. ` +
-        `Declare it in git before pointing a project at it, or pass null.`,
+      `Project not declared in git: ${input.id}. ` +
+        `Add projects/${input.id}.md to the instance repository first. ` +
+        `Declared: ${env.projects.map((p) => p.id).join(", ") || "none"}`,
     );
   }
 
   await env.DB.prepare(
-    `INSERT INTO projects (
-        id, name, description, spirit, repository, lifecycle,
-        current_outcome, success_criteria, next_review, progress_percent,
-        progress_note, position, serves
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        description = excluded.description,
-        spirit = excluded.spirit,
-        repository = excluded.repository,
-        lifecycle = excluded.lifecycle,
-        current_outcome = excluded.current_outcome,
-        success_criteria = excluded.success_criteria,
-        next_review = excluded.next_review,
-        progress_percent = excluded.progress_percent,
-        progress_note = excluded.progress_note,
-        -- Order is set deliberately and rarely; omitting it from a save must
-        -- not silently unplace the project.
-        position = COALESCE(excluded.position, projects.position),
-        -- Omitting the serves key leaves the existing link alone; clearing it
-        -- has to be explicit, because silently unlinking a project would
-        -- silently move the alignment score.
-        serves = CASE WHEN ? THEN excluded.serves ELSE projects.serves END,
-        updated_at = CURRENT_TIMESTAMP`,
+    `INSERT INTO projects (id, name, lifecycle, next_review, position)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       lifecycle = COALESCE(excluded.lifecycle, projects.lifecycle),
+       next_review = CASE WHEN ? THEN excluded.next_review ELSE projects.next_review END,
+       position = COALESCE(excluded.position, projects.position),
+       updated_at = CURRENT_TIMESTAMP`,
   )
     .bind(
-      id,
-      input.name.trim(),
-      input.description?.trim() ?? "",
-      input.spirit?.trim() ?? "",
-      input.repository?.trim() || null,
-      input.lifecycle ?? "draft",
-      input.current_outcome?.trim() ?? "",
-      input.success_criteria?.trim() ?? "",
-      input.next_review ?? null,
-      input.progress_percent ?? null,
-      input.progress_note?.trim() ?? "",
+      declared.id,
+      // The name column is legacy and no longer read; git owns it. It is written
+      // only because the column is NOT NULL.
+      declared.name,
+      input.lifecycle ?? declared.initialLifecycle ?? "draft",
+      input.next_review ?? declared.initialNextReview ?? null,
       input.position ?? null,
-      serves,
-      // `serves: null` clears the link; `undefined` leaves it. Not `"serves" in
-      // input` — the tool layer always sets the key, sometimes to undefined.
-      input.serves === undefined ? 0 : 1,
+      input.next_review === undefined ? 0 : 1,
     )
     .run();
-  return getProject(env, id);
+
+  return getProject(env, declared.id);
 }
 
 export async function setProjectProgress(
@@ -371,26 +394,65 @@ export async function setProjectProgress(
   progressPercent: number,
   progressNote = "",
 ) {
+  // Declared in git is what makes a project real; a D1 row is just the first
+  // measurement of it. So this upserts rather than requiring a row to exist —
+  // otherwise the first progress note on a freshly declared project would fail.
+  const declared = env.projects.find((project) => project.id === id);
+  if (!declared) {
+    throw new Error(
+      `Project not declared in git: ${id}. ` +
+        `Add projects/${id}.md to the instance repository first.`,
+    );
+  }
   const boundedProgress = Math.min(
     100,
     Math.max(0, Math.round(progressPercent)),
   );
-  const result = await env.DB.prepare(
-    `UPDATE projects
-     SET progress_percent = ?, progress_note = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+  await env.DB.prepare(
+    `INSERT INTO projects (id, name, lifecycle, progress_percent, progress_note)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       progress_percent = excluded.progress_percent,
+       progress_note = excluded.progress_note,
+       updated_at = CURRENT_TIMESTAMP`,
   )
-    .bind(boundedProgress, progressNote.trim(), id)
+    .bind(
+      id,
+      declared.name,
+      declared.initialLifecycle ?? "draft",
+      boundedProgress,
+      progressNote.trim(),
+    )
     .run();
-  if (!result.meta.changes) throw new Error(`Project not found: ${id}`);
   return getProject(env, id);
 }
 
 export async function getProject(env: Env, id: string) {
-  const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?")
+  const declared = env.projects.find((project) => project.id === id);
+  if (!declared) throw new Error(`Project not declared in git: ${id}`);
+
+  const state = await env.DB.prepare("SELECT * FROM projects WHERE id = ?")
     .bind(id)
-    .first();
-  if (!project) throw new Error(`Project not found: ${id}`);
+    .first<Record<string, unknown>>();
+
+  // Structure from git, state from D1. A project with no row yet is not
+  // missing — it is declared and unmeasured, which is the correct starting point.
+  const project = {
+    id: declared.id,
+    name: declared.name,
+    repository: declared.repo ?? null,
+    spirit: declared.spirit,
+    current_outcome: declared.outcome,
+    success_criteria: declared.successCriteria,
+    serves: declared.serves,
+    body: declared.body,
+    lifecycle: state?.lifecycle ?? declared.initialLifecycle ?? "draft",
+    position: state?.position ?? null,
+    next_review: state?.next_review ?? declared.initialNextReview ?? null,
+    progress_percent: state?.progress_percent ?? null,
+    progress_note: String(state?.progress_note ?? ""),
+    updated_at: state?.updated_at ?? null,
+  };
 
   const [goals, memories, decisions, captures, activity, workItems] =
     await Promise.all([
@@ -476,22 +538,23 @@ export async function getAttentionMap(env: Env, days = 30) {
 
 export async function getStaleProjects(env: Env, days = 14) {
   const safeDays = Math.min(365, Math.max(1, days));
-  const modifier = `-${safeDays} days`;
-  const result = await env.DB.prepare(
-    `SELECT
-      p.*,
-      MAX(a.occurred_at) AS last_activity_at
-    FROM projects p
-    LEFT JOIN activity_events a ON a.project_id = p.id
-    WHERE p.lifecycle = 'active'
-    GROUP BY p.id
-    HAVING COALESCE(MAX(a.occurred_at), p.updated_at) < datetime('now', ?)
-    ORDER BY COALESCE(MAX(a.occurred_at), p.updated_at) ASC`,
-  )
-    .bind(modifier)
-    .all();
+  const cutoff = Date.now() - safeDays * 24 * 60 * 60 * 1000;
 
-  return { days: safeDays, projects: result.results };
+  // Built from the portfolio rather than its own query, so a project declared in
+  // git that has never been touched still counts as stale. Querying D1 alone
+  // would silently exclude exactly the projects most worth surfacing: the ones
+  // with no activity at all.
+  const { projects } = await getPortfolio(env);
+  const stale = projects
+    .filter((project) => project.lifecycle === "active")
+    .map((project) => ({
+      ...project,
+      seen: project.last_activity_at ?? project.updated_at ?? null,
+    }))
+    .filter(({ seen }) => !seen || Date.parse(`${seen}Z`) < cutoff)
+    .sort((a, b) => String(a.seen ?? "").localeCompare(String(b.seen ?? "")));
+
+  return { days: safeDays, projects: stale };
 }
 
 export async function listGoals(

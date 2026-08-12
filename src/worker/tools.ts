@@ -46,7 +46,7 @@ import {
   recordDecision,
   remember,
   saveDailyBrief,
-  saveProject,
+  setProjectState,
   setProjectProgress,
   setStrategicResultProgress,
   updateScorecardItem,
@@ -547,68 +547,37 @@ export const tools: ToolDefinition[] = [
     execute: async (env) => getPortfolio(env),
   },
   {
-    name: "SAVE_PROJECT",
-    description: "Create or update a project in the private project map.",
+    name: "SET_PROJECT_STATE",
+    description:
+      "Set the state of a project that is declared in the instance's git: lifecycle, review date, and deliberate order. It cannot create a project or change what a project is — name, declared outcome, success criteria, and which strategic results it serves live in projects/*.md, because changing intent is a commit.",
     access: "private",
     inputSchema: objectSchema(
       {
-        id: { type: "string" },
-        name: { type: "string" },
-        description: { type: "string" },
-        spirit: {
+        id: {
           type: "string",
-          description: "What place this project occupies in the owner's life",
+          description: "Id of a project declared in projects/*.md",
         },
-        repository: {
-          type: ["string", "null"],
-          description: "GitHub owner/repo",
-        },
-        lifecycle: {
-          type: "string",
-          enum: ["draft", "active", "archived"],
-        },
-        current_outcome: { type: "string" },
-        success_criteria: { type: "string" },
+        lifecycle: { type: "string", enum: ["draft", "active", "archived"] },
         next_review: { type: ["string", "null"] },
-        progress_percent: {
-          type: ["number", "null"],
-          minimum: 0,
-          maximum: 100,
-        },
-        progress_note: { type: "string" },
         position: {
           type: ["number", "null"],
           description:
-            "Deliberate order within the lifecycle group, lowest first. Not a priority label — it is the owner's chosen sequence. Omit to leave the current order untouched.",
-        },
-        serves: {
-          type: ["string", "null"],
-          description:
-            "Id of the declared strategic result this project pursues. Must already exist in worldview.json — declare it in git first. Null means the project serves nothing declared, which is a real answer and is what the alignment score measures. Omit to leave an existing link untouched.",
+            "Deliberate order within the lifecycle group, lowest first. Not a priority label — it is the owner's chosen sequence. Omit to leave it untouched.",
         },
       },
-      ["name"],
+      ["id"],
     ),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
     execute: async (env, input) =>
-      saveProject(env, {
-        id: optionalString(input, "id"),
-        name: requiredString(input, "name"),
-        description: optionalString(input, "description"),
-        spirit: optionalString(input, "spirit"),
-        repository: optionalNullableString(input, "repository"),
+      setProjectState(env, {
+        id: requiredString(input, "id"),
         lifecycle: optionalEnum(input, "lifecycle", [
           "draft",
           "active",
           "archived",
         ]),
-        current_outcome: optionalString(input, "current_outcome"),
-        success_criteria: optionalString(input, "success_criteria"),
         next_review: optionalNullableString(input, "next_review"),
-        progress_percent: optionalNullableNumber(input, "progress_percent"),
-        progress_note: optionalString(input, "progress_note"),
         position: optionalNullableNumber(input, "position"),
-        serves: optionalNullableString(input, "serves"),
       }),
   },
   {

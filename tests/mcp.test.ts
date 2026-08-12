@@ -15,13 +15,14 @@ const worldview = resolveWorldview({ declaration: declarationJson });
 /** An instance with every optional module turned on. */
 const env = {
   worldview,
+  projects: [],
   publicWriting: { siteOrigin: "https://example.com", manifestPath: "/m.json" },
   bookmarks: { publicRoutes: true },
   analytics: { sites: ["example.com"] },
-} as Env;
+} as unknown as Env;
 
 /** An instance that configured nothing: declaration, projects, scores. */
-const bare = { worldview } as Env;
+const bare = { worldview, projects: [] } as unknown as Env;
 
 describe("MCP capability boundary", () => {
   test("public clients see only public writing tools", async () => {
