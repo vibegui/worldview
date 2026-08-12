@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "worldview": {
+      "type": "http",
+      "url": "${WORLDVIEW_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${WORLDVIEW_MCP_TOKEN}"
+      }
+    }
+  }
+}

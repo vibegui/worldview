@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vibegui-personal-ai-os",
-  "main": "src/index.ts",
+  "main": "src/worker/index.ts",
   "compatibility_date": "2026-07-12",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
@@ -37,7 +37,7 @@
   "rules": [
     {
       "type": "Text",
-      "globs": ["dist/web/index.html"],
+      "globs": ["dist-mcp/index.html"],
       "fallthrough": true
     }
   ],

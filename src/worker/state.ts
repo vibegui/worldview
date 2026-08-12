@@ -1,4 +1,10 @@
 import type { Env } from "./env.ts";
+import {
+  SCORE_IDS,
+  type ScoreId,
+  strategicResultById,
+  worldview,
+} from "../core/worldview.ts";
 
 type ProjectLifecycle = "draft" | "active" | "archived";
 type GoalStatus = "active" | "paused" | "completed" | "cancelled";
@@ -55,21 +61,78 @@ export interface RememberInput {
   supersedes_id?: string | null;
 }
 
+/**
+ * Join the declared future (git) with the measurement (D1).
+ *
+ * Structure, targets, and acceptance criteria come from `worldview.json` so
+ * that changing them is a commit. Progress and notes come from D1 because they
+ * are evidence, not declaration. A result declared in git with no row in D1 yet
+ * simply reads as 0% — no migration needed to add one.
+ */
 export async function getDeclarationDashboard(env: Env) {
-  const [results, scorecard] = await Promise.all([
-    env.DB.prepare("SELECT * FROM strategic_results ORDER BY position").all<
+  const [progressRows, scorecard] = await Promise.all([
+    env.DB.prepare(
+      "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
+    ).all<Record<string, unknown>>(),
+    env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
       Record<string, unknown>
     >(),
-    env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all(),
   ]);
 
+  const progressById = new Map(
+    progressRows.results.map((row) => [String(row.id), row]),
+  );
+
+  const strategicResults = worldview.strategicResults
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((result) => {
+      const progress = progressById.get(result.id);
+      return {
+        id: result.id,
+        position: result.position,
+        stage: result.stage ?? null,
+        score: result.score ?? null,
+        title: result.title,
+        narrative: result.narrative,
+        acceptance_criteria: result.acceptanceCriteria,
+        metrics: result.metrics,
+        progress_percent: Number(progress?.progress_percent ?? 0),
+        progress_note: String(progress?.progress_note ?? ""),
+        updated_at: progress?.updated_at ?? null,
+      };
+    });
+
+  const scoreValueById = new Map(
+    scorecard.results.map((row) => [String(row.id), row]),
+  );
+
   return {
-    strategic_results: results.results.map((result) => ({
-      ...result,
-      acceptance_criteria: parseJsonArray(result.acceptance_criteria),
-      metrics: parseJsonArray(result.metrics),
-    })),
-    scorecard: scorecard.results,
+    strategic_results: strategicResults,
+    scores: {
+      alignment: {
+        ...worldview.scores.alignment,
+        ...pickScoreValue(scoreValueById.get("alignment")),
+      },
+      integrity: {
+        ...worldview.scores.integrity,
+        ...pickScoreValue(scoreValueById.get("integrity")),
+      },
+    },
+    // Everything that used to be a top-level scorecard item stays available as
+    // diagnostic detail beneath the two scores. Nothing was dropped.
+    diagnostics: scorecard.results.filter(
+      (row) => !SCORE_IDS.includes(String(row.id) as ScoreId),
+    ),
+  };
+}
+
+function pickScoreValue(row: Record<string, unknown> | undefined) {
+  if (!row) return { current_value: null, note: "", updated_at: null };
+  return {
+    current_value: row.current_value ?? null,
+    note: String(row.note ?? ""),
+    updated_at: row.updated_at ?? null,
   };
 }
 
@@ -79,20 +142,37 @@ export async function setStrategicResultProgress(
   progressPercent: number,
   progressNote = "",
 ) {
-  const progress = Math.min(100, Math.max(0, Math.round(progressPercent)));
-  const result = await env.DB.prepare(
-    `UPDATE strategic_results
-     SET progress_percent = ?, progress_note = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-  )
-    .bind(progress, progressNote.trim(), id)
-    .run();
-  if (!result.meta.changes) {
-    throw new Error(`Strategic result not found: ${id}`);
+  const declared = strategicResultById(id);
+  if (!declared) {
+    throw new Error(
+      `Strategic result not declared in worldview.json: ${id}. ` +
+        `Declare it in git before recording progress against it.`,
+    );
   }
-  return env.DB.prepare("SELECT * FROM strategic_results WHERE id = ?")
-    .bind(id)
-    .first();
+  const progress = Math.min(100, Math.max(0, Math.round(progressPercent)));
+  await env.DB.prepare(
+    `INSERT INTO strategic_results (id, position, title, narrative, progress_percent, progress_note)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       progress_percent = excluded.progress_percent,
+       progress_note = excluded.progress_note,
+       updated_at = CURRENT_TIMESTAMP`,
+  )
+    .bind(
+      id,
+      declared.position,
+      declared.title,
+      declared.narrative,
+      progress,
+      progressNote.trim(),
+    )
+    .run();
+
+  return {
+    ...declared,
+    progress_percent: progress,
+    progress_note: progressNote.trim(),
+  };
 }
 
 export async function updateScorecardItem(

@@ -89,7 +89,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
 
   const { app, isConnected } = useApp({
     appInfo: {
-      name: "VibeGui Personal AI OS",
+      name: "VibeGui Worldview OS",
       version: "0.1.0",
     },
     capabilities: {},

@@ -14,5 +14,5 @@
     "noUncheckedIndexedAccess": true,
     "types": ["@cloudflare/workers-types", "bun-types"]
   },
-  "include": ["src", "web", "vite.config.ts"]
+  "include": ["src", "mcp-app", "tests", "vite.config.ts"]
 }

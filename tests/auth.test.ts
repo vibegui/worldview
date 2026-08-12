@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { accessForRequest, timingSafeEqual } from "./auth.ts";
-import type { Env } from "./env.ts";
+import { accessForRequest, timingSafeEqual } from "../src/worker/auth.ts";
+import type { Env } from "../src/worker/env.ts";
 
 function env(token?: string): Env {
   return {

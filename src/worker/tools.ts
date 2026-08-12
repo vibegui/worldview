@@ -27,6 +27,7 @@ import {
   searchPublicWriting,
 } from "./public-content.ts";
 import { getCorpusStatus, searchWritingCorpus } from "./rag.ts";
+import { worldview } from "../core/worldview.ts";
 import {
   capture,
   createGoal,
@@ -460,7 +461,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_DECLARATION",
     description:
-      "Return the canonical VibeGui December 2026 declaration: charter, strategic outcomes, conditions of satisfaction, and scorecard.",
+      "Answer the three questions this system exists for: what my life is about (the declared future, from git), what game I am playing (the strategic results and conditions of satisfaction), and whether I am playing it well (alignment and integrity). Read this before recommending priorities.",
     access: "private",
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
@@ -469,7 +470,19 @@ export const tools: ToolDefinition[] = [
         getDeclaration(env),
         getDeclarationDashboard(env),
       ]);
-      return { ...declaration, ...dashboard };
+      return {
+        what_my_life_is_about: {
+          declared_future: worldview.declaredFuture,
+          source: "worldview.json",
+          long_form: declaration,
+        },
+        what_game_i_am_playing: {
+          strategic_results: dashboard.strategic_results,
+          conditions_of_satisfaction: worldview.conditionsOfSatisfaction,
+        },
+        am_i_playing_it_well: dashboard.scores,
+        diagnostics: dashboard.diagnostics,
+      };
     },
   },
   {
@@ -524,7 +537,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_PORTFOLIO",
     description:
-      "Open the private Personal AI OS project map: draft, active, and archived projects with goals, progress, work, and activity.",
+      "Open the private Worldview OS project map: draft, active, and archived projects with goals, progress, work, and activity.",
     access: "private",
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
@@ -648,7 +661,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "LIST_GOALS",
     description:
-      "List portfolio-wide or project-scoped goals from the private Personal AI OS.",
+      "List portfolio-wide or project-scoped goals from the private Worldview OS.",
     access: "private",
     inputSchema: objectSchema({
       project_id: { type: "string" },
@@ -874,7 +887,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "RECORD_DECISION",
     description:
-      "Record an immutable decision and its rationale in the private Personal AI OS.",
+      "Record an immutable decision and its rationale in the private Worldview OS.",
     access: "private",
     inputSchema: objectSchema(
       {
@@ -1007,7 +1020,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_STATUS",
     description:
-      "Return private Personal AI OS health and record counts without exposing secret values.",
+      "Return private Worldview OS health and record counts without exposing secret values.",
     access: "private",
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },

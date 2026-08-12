@@ -1,4 +1,4 @@
-import bundledHtml from "../dist/web/index.html";
+import bundledHtml from "../../dist-mcp/index.html";
 import type { AccessLevel } from "./env.ts";
 import {
   ANALYTICS_RESOURCE,
@@ -25,7 +25,7 @@ const resources: ResourceDefinition[] = [
   },
   {
     uri: PERSONAL_AI_OS_RESOURCE,
-    name: "VibeGui Personal AI OS",
+    name: "VibeGui Worldview OS",
     description:
       "Private project map, goals, memory, daily brief, attention evidence, and inbox.",
     access: "private",

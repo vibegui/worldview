@@ -4,8 +4,8 @@ import {
   computeMatchFlags,
   parseBookmarkInput,
   tokenizeSearch,
-} from "./bookmarks.ts";
-import { formatInsight, parseClassification } from "./bookmark-enrichment.ts";
+} from "../src/worker/bookmarks.ts";
+import { formatInsight, parseClassification } from "../src/worker/bookmark-enrichment.ts";
 
 describe("bookmark transformations", () => {
   test("builds a safe prefix FTS query from user text", () => {

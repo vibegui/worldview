@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { Env } from "./env.ts";
-import { dispatchMcp } from "./mcp.ts";
+import type { Env } from "../src/worker/env.ts";
+import { dispatchMcp } from "../src/worker/mcp.ts";
 import {
   BOOKMARKS_RESOURCE,
   mergeSemanticWriting,
   PERSONAL_AI_OS_RESOURCE,
-} from "./tools.ts";
+} from "../src/worker/tools.ts";
 
 const env = {} as Env;
 

@@ -1,21 +1,24 @@
 {
-  "name": "@vibegui/personal-ai-os",
+  "name": "worldview",
   "version": "0.1.0",
+  "description": "What your life is about, what game you are playing, and whether you are playing it well — as an MCP app.",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:web": "vite build",
-    "build": "bun run build:web",
     "dev": "wrangler dev",
-    "dev:web": "vite build --watch",
+    "dev:app": "vite build --watch",
+    "build": "vite build",
     "check": "tsc --noEmit",
     "test": "bun test",
+    "types": "wrangler types",
+    "db:local": "wrangler d1 migrations apply vibegui-personal-ai-os --local",
+    "db:remote": "wrangler d1 migrations apply vibegui-personal-ai-os --remote",
     "corpus:upload": "bun scripts/upload-corpus.ts",
     "corpus:upload:remote": "bun scripts/upload-corpus.ts --remote",
     "bookmarks:import": "bun scripts/import-bookmarks.ts --local",
     "bookmarks:import:remote": "bun scripts/import-bookmarks.ts --remote",
-    "deploy:dry": "bun run build && wrangler deploy --dry-run",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "bun run build && wrangler deploy",
+    "deploy:dry": "bun run build && wrangler deploy --dry-run"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.4",

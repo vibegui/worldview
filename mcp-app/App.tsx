@@ -36,7 +36,7 @@ export function App() {
         </span>
       </header>
 
-      <nav className="nav" aria-label="Personal AI OS views">
+      <nav className="nav" aria-label="Worldview OS views">
         {NAV_ITEMS.map((item) => (
           <button
             type="button"
@@ -133,13 +133,27 @@ function ResultView({
   if (toolName === "GET_DAILY_BRIEF_INPUT") {
     return <BriefInputView result={result} />;
   }
-  if (toolName === "GET_DECLARATION" || "markdown" in result) {
+  if (
+    toolName === "GET_DECLARATION" ||
+    "what_my_life_is_about" in result ||
+    "markdown" in result
+  ) {
+    // GET_DECLARATION answers three questions; the long-form charter markdown
+    // still comes from DECLARATION.md in git, nested under the first one.
+    const about = asNullableRecord(result.what_my_life_is_about);
+    const game = asNullableRecord(result.what_game_i_am_playing);
+    const longForm = asNullableRecord(about?.long_form);
+    const scores = asNullableRecord(result.am_i_playing_it_well);
     return (
       <DeclarationView
-        markdown={text(result.markdown)}
-        source={text(result.source)}
-        strategicResults={asRecords(result.strategic_results)}
-        scorecard={asRecords(result.scorecard)}
+        declaredFuture={text(about?.declared_future)}
+        markdown={text(longForm?.markdown ?? result.markdown)}
+        source={text(longForm?.source ?? result.source)}
+        strategicResults={asRecords(
+          game?.strategic_results ?? result.strategic_results,
+        )}
+        scores={scores}
+        diagnostics={asRecords(result.diagnostics ?? result.scorecard)}
       />
     );
   }
@@ -1010,18 +1024,23 @@ function BriefInputView({ result }: { result: JsonRecord }) {
 }
 
 function DeclarationView({
+  declaredFuture,
   markdown,
   source,
   strategicResults,
-  scorecard,
+  scores,
+  diagnostics,
 }: {
+  declaredFuture: string;
   markdown: string;
   source: string;
   strategicResults: JsonRecord[];
-  scorecard: JsonRecord[];
+  scores: JsonRecord | null;
+  diagnostics: JsonRecord[];
 }) {
   const [charterExpanded, setCharterExpanded] = useState(false);
-  if (!markdown) {
+  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
+  if (!declaredFuture && !markdown) {
     return <Empty message="The declaration could not be loaded." />;
   }
   const charter = extractDeclarationSection(
@@ -1034,56 +1053,71 @@ function DeclarationView({
     "## Conditions of Satisfaction",
     "## December 2026 Scorecard",
   );
-  const charterStatement =
-    charter.paragraphs[0] ?? "VibeGui is my Personal AI OS.";
+  // The declared future in worldview.json is authoritative; the long-form
+  // charter in DECLARATION.md is the expandable detail behind it.
+  const statement =
+    declaredFuture ||
+    charter.paragraphs[0] ||
+    "VibeGui is my Worldview OS.";
+  const alignment = asNullableRecord(scores?.alignment);
+  const integrity = asNullableRecord(scores?.integrity);
 
   return (
     <article className="declaration">
       <section className="charter-card">
-        <p className="eyebrow">The future we are building</p>
-        <p className="charter-statement">{cleanMarkdown(charterStatement)}</p>
-        <button
-          type="button"
-          className="charter-toggle"
-          aria-expanded={charterExpanded}
-          onClick={() => setCharterExpanded((expanded) => !expanded)}
-        >
-          {charterExpanded ? "Hide the full charter" : "Read the full charter"}
-          <span aria-hidden="true">{charterExpanded ? "↑" : "↓"}</span>
-        </button>
-        {charterExpanded && (
-          <ul className="charter-details">
-            {charter.bullets.map((item) => (
-              <li key={item}>{cleanMarkdown(item)}</li>
-            ))}
-          </ul>
+        <p className="eyebrow">What my life is about</p>
+        {statement.split("\n\n").map((paragraph) => (
+          <p className="charter-statement" key={paragraph.slice(0, 40)}>
+            {cleanMarkdown(paragraph)}
+          </p>
+        ))}
+        {charter.bullets.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="charter-toggle"
+              aria-expanded={charterExpanded}
+              onClick={() => setCharterExpanded((expanded) => !expanded)}
+            >
+              {charterExpanded
+                ? "Hide the full charter"
+                : "Read the full charter"}
+              <span aria-hidden="true">{charterExpanded ? "↑" : "↓"}</span>
+            </button>
+            {charterExpanded && (
+              <ul className="charter-details">
+                {charter.bullets.map((item) => (
+                  <li key={item}>{cleanMarkdown(item)}</li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </section>
 
       <section className="declaration-block">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">December 2026</p>
-            <h2>Strategic results</h2>
+            <p className="eyebrow">Two scores, no others</p>
+            <h2>Am I playing it well?</h2>
           </div>
         </div>
-        <div className="strategic-results">
-          {strategicResults.map((result) => (
-            <StrategicResultCard key={text(result.id)} result={result} />
-          ))}
+        <div className="scorecard-grid">
+          {alignment && <ScoreCard score={alignment} />}
+          {integrity && <ScoreCard score={integrity} />}
         </div>
       </section>
 
       <section className="declaration-block">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">What proves it</p>
-            <h2>Scorecard</h2>
+            <p className="eyebrow">What game I am playing</p>
+            <h2>Strategic results</h2>
           </div>
         </div>
-        <div className="scorecard-grid">
-          {scorecard.map((item) => (
-            <ScorecardItem key={text(item.id)} item={item} />
+        <div className="strategic-results">
+          {strategicResults.map((result) => (
+            <StrategicResultCard key={text(result.id)} result={result} />
           ))}
         </div>
       </section>
@@ -1102,12 +1136,69 @@ function DeclarationView({
         </ul>
       </section>
 
+      {diagnostics.length > 0 && (
+        <section className="declaration-block">
+          <button
+            type="button"
+            className="charter-toggle"
+            aria-expanded={diagnosticsExpanded}
+            onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
+          >
+            {diagnosticsExpanded ? "Hide diagnostics" : "Show diagnostics"}
+            <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
+          </button>
+          {diagnosticsExpanded && (
+            <div className="scorecard-grid">
+              {diagnostics.map((item) => (
+                <ScorecardItem key={text(item.id)} item={item} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {source && (
         <footer>
           <a href={source} target="_blank" rel="noopener noreferrer">
             View canonical declaration on GitHub ↗
           </a>
         </footer>
+      )}
+    </article>
+  );
+}
+
+/**
+ * Integrity deliberately gets no progress bar: it counts unacknowledged
+ * commitments toward zero, and a percentage on it would be a category error.
+ */
+function ScoreCard({ score }: { score: JsonRecord }) {
+  const countToZero = text(score.kind) === "count-to-zero";
+  const raw = score.current_value;
+  const measured = raw !== null && raw !== undefined;
+  const domains = asNullableRecord(score.domains);
+
+  return (
+    <article className="scorecard-item">
+      <p>{text(score.label)}</p>
+      {measured ? (
+        <strong className={countToZero && number(raw) > 0 ? "not-yet" : "yes"}>
+          {number(raw)}
+          {!countToZero && <span> / 100</span>}
+        </strong>
+      ) : (
+        <strong className="not-yet">Not yet measured</strong>
+      )}
+      <small>{text(score.question)}</small>
+      <small>{text(score.measure)}</small>
+      {domains && (
+        <ul className="charter-details">
+          {["word", "systems", "objects"].map((key) => (
+            <li key={key}>
+              <strong>{key}</strong> — {text(domains[key])}
+            </li>
+          ))}
+        </ul>
       )}
     </article>
   );
