@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -100,6 +101,11 @@ export function McpProvider({ children }: { children: ReactNode }) {
     McpUiHostContext | undefined
   >();
   const [available, setAvailable] = useState<string[]>([]);
+  // Which call the view belongs to. Tool calls overlap — clicking a tab while
+  // the boot call is still in flight means two are open at once — and without
+  // this the slower one wins whenever it happens to finish last, snapping the
+  // view back to something the reader already navigated away from.
+  const latestCall = useRef(0);
 
   // The server is the only thing that knows what this caller may do, so the app
   // asks rather than assuming. That is what lets one bundle serve an anonymous
@@ -198,6 +204,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
       args: Record<string, unknown> = {},
     ): Promise<T> => {
       if (!app && !STANDALONE) throw new Error("MCP App is not connected");
+      const call = (latestCall.current += 1);
       setView((current) => ({
         ...current,
         loading: true,
@@ -220,6 +227,7 @@ export function McpProvider({ children }: { children: ReactNode }) {
         } else {
           structuredContent = await callToolOverHttp(name, args);
         }
+        if (call !== latestCall.current) return structuredContent as T;
         setView((current) => ({
           ...current,
           loading: false,
@@ -227,11 +235,13 @@ export function McpProvider({ children }: { children: ReactNode }) {
         }));
         return structuredContent as T;
       } catch (error) {
-        setView((current) => ({
-          ...current,
-          loading: false,
-          error: String(error),
-        }));
+        if (call === latestCall.current) {
+          setView((current) => ({
+            ...current,
+            loading: false,
+            error: String(error),
+          }));
+        }
         throw error;
       }
     },

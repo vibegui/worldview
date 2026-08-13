@@ -86,7 +86,7 @@ export function App() {
   }, [callTool, connected, nav, toolName]);
 
   return (
-    <main className={`shell ${bookmarksActive ? "bookmarks-shell" : ""}`}>
+    <main className="shell">
       {/* The header is full-bleed with its rule spanning the viewport, and only
           its contents are constrained — same as vibegui.com, where a centered
           box for everything would put the rule in the wrong place. */}
@@ -130,7 +130,13 @@ export function App() {
         </div>
       </header>
 
-      <section className="container content" aria-live="polite">
+      {/* The bookmarks workspace is a table and wants more room than a reading
+          column. Widening the content container is the whole of it — widening
+          the shell moved the header and every other view with it. */}
+      <section
+        className={`container content ${bookmarksActive ? "wide" : ""}`}
+        aria-live="polite"
+      >
         <ResultView
           toolName={toolName}
           result={asRecord(toolResult)}
@@ -445,7 +451,13 @@ function PortfolioView({
       </div>
 
       {projects.length === 0 ? (
-        <Empty message="Your map is empty. Ask the agent to add your first project." />
+        <Empty
+          message={
+            operational
+              ? "Your map is empty. Ask the agent to add your first project."
+              : "Nothing here is public yet."
+          }
+        />
       ) : (
         <div className="project-list">
           {projects.map((project) => (

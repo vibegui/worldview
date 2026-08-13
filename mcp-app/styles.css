@@ -96,6 +96,15 @@ button {
   padding-bottom: 4rem;
 }
 
+/* Wider than the reading column, still centred and still padded. */
+.content.wide {
+  max-width: 1180px;
+}
+
+.content.wide > * {
+  max-width: none;
+}
+
 .content > *,
 .writing-list,
 .declaration,
@@ -1478,9 +1487,6 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 /* ---------- private bookmarks workspace ---------- */
-.bookmarks-shell {
-  width: min(100%, 1180px);
-}
 
 .bookmarks-view {
   --bookmark-control: color-mix(in srgb, var(--surface-raised) 72%, var(--bg));

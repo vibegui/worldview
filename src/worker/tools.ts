@@ -1067,8 +1067,21 @@ export function toolsForAccess(
   env: Env,
   access: AccessLevel,
 ): ToolDefinition[] {
+  // Publicly, the project map exists only if some project opted in. A tab that
+  // is always empty is worse than no tab: it advertises something the visitor
+  // cannot have, and the same "absent, not disabled" rule that governs modules
+  // should govern this.
+  const anyPublicProject = env.projects.some((project) => project.isPublic);
+
   return tools.filter((tool) => {
     if (tool.access !== "public" && access !== "private") return false;
+    if (
+      tool.name === "GET_PORTFOLIO" &&
+      access !== "private" &&
+      !anyPublicProject
+    ) {
+      return false;
+    }
     const module = TOOL_MODULE[tool.name];
     return !module || Boolean(env[module]);
   });

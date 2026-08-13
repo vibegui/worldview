@@ -13,10 +13,12 @@ import { parseProjects, publicProject } from "../src/core/projects.ts";
 
 const worldview = resolveWorldview({ declaration: declarationJson });
 
-/** An instance with every optional module turned on. */
+/** An instance with every optional module on and one project made public. */
 const env = {
   worldview,
-  projects: [],
+  projects: parseProjects([
+    `---\nid: shown\nname: Shown\nserves: [agency]\npublic: true\n---\n\n## Declared outcome\n\nx\n`,
+  ]),
   publicWriting: { siteOrigin: "https://example.com", manifestPath: "/m.json" },
   bookmarks: { publicRoutes: true },
   analytics: { sites: ["example.com"] },
@@ -221,5 +223,44 @@ describe("what a stranger may see", () => {
     ]) {
       expect(names, `${absent} is public`).not.toContain(absent);
     }
+  });
+});
+
+describe("a public tab that would always be empty", () => {
+  const closed = parseProjects([
+    `---\nid: a\nname: A\nserves: [agency]\n---\n\n## Declared outcome\n\nx\n`,
+  ]);
+  const open = parseProjects([
+    `---\nid: b\nname: B\nserves: [agency]\npublic: true\n---\n\n## Declared outcome\n\nx\n`,
+  ]);
+
+  test("does not appear", async () => {
+    // Zero public projects means GET_PORTFOLIO would answer "0 projects" to
+    // every visitor. That advertises something they cannot have, so the tool is
+    // absent — the same rule that governs an unconfigured module.
+    const result = (await dispatchMcp(
+      { ...env, projects: closed } as Env,
+      "public",
+      "tools/list",
+    )) as { tools: Array<{ name: string }> };
+    expect(result.tools.map((t) => t.name)).not.toContain("GET_PORTFOLIO");
+  });
+
+  test("appears as soon as one project opts in", async () => {
+    const result = (await dispatchMcp(
+      { ...env, projects: open } as Env,
+      "public",
+      "tools/list",
+    )) as { tools: Array<{ name: string }> };
+    expect(result.tools.map((t) => t.name)).toContain("GET_PORTFOLIO");
+  });
+
+  test("is always there for the owner", async () => {
+    const result = (await dispatchMcp(
+      { ...env, projects: closed } as Env,
+      "private",
+      "tools/list",
+    )) as { tools: Array<{ name: string }> };
+    expect(result.tools.map((t) => t.name)).toContain("GET_PORTFOLIO");
   });
 });
