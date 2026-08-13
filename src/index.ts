@@ -35,6 +35,8 @@ export function createWorldview(
   return createWorker({
     worldview,
     projects: parseProjects(config.projects),
+    hero: config.hero,
+    site: config.site,
     publicWriting: config.publicWriting,
     bookmarks: config.bookmarks,
     analytics: config.analytics,

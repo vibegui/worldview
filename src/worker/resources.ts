@@ -6,6 +6,15 @@ import {
   PERSONAL_AI_OS_RESOURCE,
 } from "./tools.ts";
 
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"]/g,
+    (character) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character] ??
+      character,
+  );
+}
+
 export const MCP_APP_MIME = "text/html;profile=mcp-app";
 
 export interface ResourceDefinition {
@@ -65,15 +74,36 @@ export function appHtml(
   // Names and titles only: the app calls GET_DECLARATION for the rest.
   const declaration = {
     name: env.worldview.name,
+    hero: env.hero ?? null,
     results: Object.fromEntries(
       env.worldview.strategicResults.map((result) => [result.id, result.title]),
     ),
   };
+  // Rewritten in the markup rather than set from script, so the tab is right on
+  // first paint and a crawler sees it at all.
+  const title = env.site?.title ?? env.worldview.name;
+  let head = html.replace(
+    /<title>[\s\S]*?<\/title>/,
+    `<title>${escapeHtml(title)}</title>`,
+  );
+  if (env.site?.description) {
+    head = head.replace(
+      "</head>",
+      `<meta name="description" content="${escapeHtml(env.site.description)}"></head>`,
+    );
+  }
+  if (env.site?.favicon) {
+    head = head.replace(
+      "</head>",
+      `<link rel="icon" href="${escapeHtml(env.site.favicon)}"></head>`,
+    );
+  }
+
   const boot = bootTool
     ? `window.__BOOT_TOOL__=${JSON.stringify(bootTool)};`
     : "";
   const mode = standalone ? "window.__STANDALONE__=true;" : "";
-  return `${html}<script>window.__WORLDVIEW__=${JSON.stringify(declaration)};${mode}${boot}</script>`;
+  return `${head}<script>window.__WORLDVIEW__=${JSON.stringify(declaration)};${mode}${boot}</script>`;
 }
 
 export function readResource(

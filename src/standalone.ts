@@ -27,6 +27,24 @@ export default createWorldview({
   // Every module on, so the demo exercises the whole surface and the seed data
   // has somewhere to render. An instance that wants none of this omits all three
   // keys and gets declaration, projects, learning, and the two scores.
+  site: {
+    title: "Worldview",
+    description:
+      "What your life is about, what game you are playing, and whether you are playing it well.",
+  },
+
+  // The masthead a visitor reads first. Content, so an instance owns it.
+  hero: {
+    eyebrow: "Ada Lovelace \u00b7 London",
+    title: "Ideas I wish I had earlier.",
+    intro:
+      "I build software and companies, currently as co-founder of [an example](https://example.com). This is where I work through the distinctions that shape how I lead, build, and imagine possible futures.",
+    links: [
+      { label: "LinkedIn", href: "https://example.com/in" },
+      { label: "GitHub", href: "https://example.com/gh" },
+    ],
+  },
+
   publicWriting: {
     siteOrigin: "https://vibegui.com",
     manifestPath: "/content/manifest.json",
