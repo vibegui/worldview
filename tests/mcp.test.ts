@@ -11,6 +11,7 @@ import declarationJson from "../worldview.json" with { type: "json" };
 import { resolveWorldview } from "../src/core/worldview.ts";
 import { parseProjects, publicProject } from "../src/core/projects.ts";
 import { listPublicWriting } from "../src/worker/public-content.ts";
+import { fetchPageMetadata } from "../src/worker/bookmark-metadata.ts";
 
 const worldview = resolveWorldview({ declaration: declarationJson });
 
@@ -315,5 +316,54 @@ describe("one manifest, two languages", () => {
     // English readers through a redirect at best.
     const en = await withFetch(() => listPublicWriting(env, "en"));
     expect(en[0]?.url).toBe("https://example.com/en/article/a/");
+  });
+});
+
+describe("saving a link", () => {
+  const page = `<!doctype html><html lang="pt-BR"><head>
+    <title>Raw title</title>
+    <meta property="og:title" content="A reconquista do futuro">
+    <meta property="og:description" content="Uma certa ideia do Brasil">
+    <meta property="og:site_name" content="piauí">
+    <meta property="article:published_time" content="2026-08-01T10:00:00Z">
+    <link rel="icon" href="/static/favicon.png">
+  </head><body><p>body</p></body></html>`;
+
+  const withPage = async <T,>(html: string, run: () => Promise<T>) => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(html, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      })) as unknown as typeof fetch;
+    try {
+      return await run();
+    } finally {
+      globalThis.fetch = original;
+    }
+  };
+
+  test("reads what the page says about itself", async () => {
+    // One URL in, a findable bookmark out — no API key, no model, no credit
+    // balance. A link saved with no title is a row nobody finds again.
+    const meta = await withPage(page, () =>
+      fetchPageMetadata("https://example.com/a"),
+    );
+    expect(meta.title).toBe("A reconquista do futuro");
+    expect(meta.description).toBe("Uma certa ideia do Brasil");
+    expect(meta.siteName).toBe("piauí");
+    expect(meta.language).toBe("pt");
+    expect(meta.publishedAt).toBe("2026-08-01T10:00:00Z");
+    // Relative in the markup, absolute in the record: a relative icon is worse
+    // than none, because it renders as a broken image somewhere else.
+    expect(meta.icon).toBe("https://example.com/static/favicon.png");
+  });
+
+  test("falls back to <title> when there is no Open Graph", async () => {
+    const meta = await withPage(
+      `<html><head><title>  Just   a title </title></head><body></body></html>`,
+      () => fetchPageMetadata("https://example.com/b"),
+    );
+    expect(meta.title).toBe("Just a title");
+    expect(meta.description).toBeNull();
   });
 });

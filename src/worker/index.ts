@@ -243,10 +243,19 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
       return new Response(appHtml(env, null, true), {
         headers: {
           "content-type": "text/html; charset=utf-8",
-          // A signed-in view must not be cached by anything in front of the
-          // worker; the anonymous one is the same bytes for everyone.
+          // A signed-in view must never be cached by anything in front of the
+          // worker. The anonymous one is the same bytes for everyone, so it is
+          // cached briefly and then served stale while it revalidates — a reader
+          // gets an instant response and at worst one revalidation behind, and
+          // the origin is hit once per minute rather than once per visitor.
+          // `stale-if-error` means a bad deploy or a D1 blip shows the last good
+          // page instead of an error.
           "cache-control":
-            access === "private" ? "no-store" : "public, max-age=60",
+            access === "private"
+              ? "no-store"
+              : "public, max-age=60, stale-while-revalidate=86400, stale-if-error=86400",
+          // The same URL is a different document depending on the cookie.
+          vary: "Cookie",
           "x-content-type-options": "nosniff",
         },
       });

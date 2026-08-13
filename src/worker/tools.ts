@@ -6,6 +6,7 @@ import {
   type MetricsGroup,
 } from "./analytics.ts";
 import { enrichBookmark } from "./bookmark-enrichment.ts";
+import { fetchPageMetadata } from "./bookmark-metadata.ts";
 import {
   batchUpsertBookmarks,
   createBookmark,
@@ -258,6 +259,72 @@ export const tools: ToolDefinition[] = [
       );
       if (!bookmark) throw new Error("Bookmark not found");
       return { bookmark };
+    },
+  },
+  {
+    name: "SAVE_BOOKMARK",
+    description:
+      "Save a link. Pass the URL and nothing else: the page's own title, description, icon, site name, language, and publication date are read from its head. Everything else is optional. Re-saving the same URL updates it rather than failing, so this is safe to repeat. Enrichment, when configured, is a separate step.",
+    access: "private",
+    inputSchema: objectSchema(
+      {
+        url: { type: "string", format: "uri" },
+        notes: {
+          type: "string",
+          description: "Why this is worth keeping, in your words.",
+        },
+        stars: { type: "integer", minimum: 1, maximum: 5 },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Prefixed, e.g. "topic:ai", "persona:mcp_developer", "type:essay".',
+        },
+        enrich: {
+          type: "boolean",
+          description:
+            "Also run research and classification. Requires MESH_GATEWAY_URL and MESH_API_KEY; without them the bookmark is still saved.",
+        },
+      },
+      ["url"],
+    ),
+    _meta: { ui: { resourceUri: BOOKMARKS_RESOURCE } },
+    execute: async (env, input) => {
+      const url = requiredString(input, "url");
+      // Read the page first: a link with no title is a row nobody can find
+      // again, and this needs no key, no model, and no credit balance.
+      const page = await fetchPageMetadata(url).catch((error) => {
+        console.warn("bookmark metadata unavailable", String(error));
+        return null;
+      });
+
+      const bookmark = await createBookmark(env, {
+        // The URL after redirects is the one worth keeping — trackers and
+        // shorteners otherwise become the identity of the bookmark.
+        url: page?.url ?? url,
+        title: page?.title ?? null,
+        description: page?.description ?? null,
+        icon: page?.icon ?? null,
+        language: page?.language ?? null,
+        published_at: page?.publishedAt ?? null,
+        notes: optionalString(input, "notes") ?? null,
+        stars: optionalNumber(input, "stars") ?? null,
+        tags: Array.isArray(input.tags)
+          ? (input.tags as unknown[]).filter(
+              (tag): tag is string => typeof tag === "string",
+            )
+          : undefined,
+      });
+
+      if (input.enrich !== true) {
+        return { bookmark, metadata_read: Boolean(page) };
+      }
+      // Enrichment is best-effort on purpose: losing the link because a
+      // downstream service is unavailable is the worse outcome.
+      const enriched = await enrichBookmark(env, bookmark.url as string).catch(
+        (error) => ({ error: String(error) }),
+      );
+      return { bookmark, metadata_read: Boolean(page), enriched };
     },
   },
   {
