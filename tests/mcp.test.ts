@@ -10,6 +10,7 @@ import {
 import declarationJson from "../worldview.json" with { type: "json" };
 import { resolveWorldview } from "../src/core/worldview.ts";
 import { parseProjects, publicProject } from "../src/core/projects.ts";
+import { listPublicWriting } from "../src/worker/public-content.ts";
 
 const worldview = resolveWorldview({ declaration: declarationJson });
 
@@ -262,5 +263,57 @@ describe("a public tab that would always be empty", () => {
       "tools/list",
     )) as { tools: Array<{ name: string }> };
     expect(result.tools.map((t) => t.name)).toContain("GET_PORTFOLIO");
+  });
+});
+
+describe("one manifest, two languages", () => {
+  const manifest = {
+    articles: [
+      { slug: "a", locale: "en", status: "published", title: "A",
+        description: "", date: "2026-01-02", tags: [], path: "/en/article/a/" },
+      { slug: "b", locale: "pt-BR", status: "published", title: "B",
+        description: "", date: "2026-01-01", tags: [], path: "/article/b/" },
+      { slug: "c", locale: "en", status: "draft", title: "C",
+        description: "", date: "2026-01-03", tags: [], path: "/en/article/c/" },
+    ],
+  };
+  const env = {
+    publicWriting: { siteOrigin: "https://example.com", manifestPath: "/m.json" },
+  } as unknown as Env;
+
+  const withFetch = async <T,>(run: () => Promise<T>): Promise<T> => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify(manifest), {
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch;
+    try {
+      return await run();
+    } finally {
+      globalThis.fetch = original;
+    }
+  };
+
+  test("a locale returns only that language", async () => {
+    // The manifest holds every language at once, so without a filter each piece
+    // appears twice under two titles — which is what the reader sees, not a
+    // subtle data issue.
+    const en = await withFetch(() => listPublicWriting(env, "en"));
+    expect(en.map((a) => a.slug)).toEqual(["a"]);
+
+    const pt = await withFetch(() => listPublicWriting(env, "pt-BR"));
+    expect(pt.map((a) => a.slug)).toEqual(["b"]);
+  });
+
+  test("drafts never appear, in any language", async () => {
+    const all = await withFetch(() => listPublicWriting(env));
+    expect(all.map((a) => a.slug).sort()).toEqual(["a", "b"]);
+  });
+
+  test("each article keeps its own locale's path", async () => {
+    // `/article/<slug>` is only correct for pt-BR; using it everywhere sends
+    // English readers through a redirect at best.
+    const en = await withFetch(() => listPublicWriting(env, "en"));
+    expect(en[0]?.url).toBe("https://example.com/en/article/a/");
   });
 });

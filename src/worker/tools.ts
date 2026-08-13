@@ -419,10 +419,17 @@ export const tools: ToolDefinition[] = [
   {
     name: "LIST_PUBLIC_WRITING",
     description:
-      "List published VibeGui articles. This is a public tool and never returns drafts or private state.",
+      "List published articles, newest first. Public, and never returns drafts or private state. Pass a locale to get one language; omit it and you get every language in one list, which is rarely what a reader wants.",
     access: "public",
-    inputSchema: objectSchema({}),
-    execute: async (env) => ({ writing: await listPublicWriting(env) }),
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        description: 'Manifest locale, e.g. "en" or "pt-BR".',
+      },
+    }),
+    execute: async (env, input) => ({
+      writing: await listPublicWriting(env, optionalString(input, "locale")),
+    }),
   },
   {
     name: "GET_PUBLIC_WRITING",

@@ -44,18 +44,50 @@ interface Hero {
 // twice on the server, deciding the navigation too — rather than a second
 // public frontend that drifts from this one.
 const NAV_ITEMS = [
-  { label: "Writing", tool: "LIST_PUBLIC_WRITING", path: "/" },
-  { label: "Declaration", tool: "GET_DECLARATION", path: "/declaration" },
-  { label: "Projects", tool: "GET_PORTFOLIO", path: "/projects" },
-  { label: "Analytics", tool: "SITES_OVERVIEW", path: "/analytics" },
-  { label: "Learning", tool: "RECALL_MEMORY", path: "/learning" },
+  { label: { en: "Writing", "pt-BR": "Textos" }, tool: "LIST_PUBLIC_WRITING", path: "/" },
   {
-    label: "Bookmarks",
+    label: { en: "Declaration", "pt-BR": "Declaração" },
+    tool: "GET_DECLARATION",
+    path: "/declaration",
+  },
+  {
+    label: { en: "Projects", "pt-BR": "Projetos" },
+    tool: "GET_PORTFOLIO",
+    path: "/projects",
+  },
+  {
+    label: { en: "Analytics", "pt-BR": "Analytics" },
+    tool: "SITES_OVERVIEW",
+    path: "/analytics",
+  },
+  {
+    label: { en: "Learning", "pt-BR": "Aprendizado" },
+    tool: "RECALL_MEMORY",
+    path: "/learning",
+  },
+  {
+    label: { en: "Bookmarks", "pt-BR": "Favoritos" },
     tool: "LIST_ALL_BOOKMARKS",
     publicTool: "LIST_BOOKMARKS",
     path: "/bookmarks",
   },
 ] as const;
+
+type Locale = "en" | "pt-BR";
+
+/**
+ * The URL is the source of truth for language, the way vibegui.com does it:
+ * `/en/...` is English and everything else is Portuguese. No cookie, no
+ * negotiation — a link someone shares opens in the language they were reading.
+ */
+function localeFromPath(pathname: string): Locale {
+  return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "pt-BR";
+}
+
+function pathFor(path: string, locale: Locale): string {
+  if (locale !== "en") return path;
+  return path === "/" ? "/en/" : `/en${path}`;
+}
 
 export function App() {
   const {
@@ -70,6 +102,9 @@ export function App() {
   } = useMcp();
   const initialized = useRef(false);
   const bookmarksActive = isBookmarkTool(toolName);
+  const [locale, setLocale] = useState<Locale>(() =>
+    STANDALONE ? localeFromPath(window.location.pathname) : "en",
+  );
 
   // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
   const nav = STANDALONE
@@ -85,11 +120,14 @@ export function App() {
   // A tab is a place, so it gets a URL: shareable, refreshable, and back works.
   // The worker serves the same bundle on every path, so routing is entirely the
   // question of which tool to open.
-  const open = (tool: string, path?: string) => {
-    if (STANDALONE && path && window.location.pathname !== path) {
-      window.history.pushState({}, "", path);
+  const open = (tool: string, path?: string, next: Locale = locale) => {
+    const href = path ? pathFor(path, next) : undefined;
+    if (STANDALONE && href && window.location.pathname !== href) {
+      window.history.pushState({}, "", href);
     }
-    void callTool(tool);
+    if (next !== locale) setLocale(next);
+    document.documentElement.lang = next;
+    void callTool(tool, tool === "LIST_PUBLIC_WRITING" ? { locale: next } : {});
   };
 
   useEffect(() => {
@@ -97,18 +135,29 @@ export function App() {
     if (STANDALONE && !nav.length) return;
     initialized.current = true;
     const bootFlag = (window as { __BOOT_TOOL__?: string }).__BOOT_TOOL__;
+    const here = STANDALONE ? window.location.pathname : "";
     const routed = STANDALONE
-      ? nav.find((item) => item.path === window.location.pathname)?.tool
+      ? nav.find((item) => pathFor(item.path, locale) === here)?.tool
       : undefined;
-    void callTool(bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION");
+    const boot = bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION";
+    if (STANDALONE) document.documentElement.lang = locale;
+    void callTool(boot, boot === "LIST_PUBLIC_WRITING" ? { locale } : {});
   }, [callTool, connected, nav, toolName]);
 
   // Back and forward move between tabs rather than out of the app.
   useEffect(() => {
     if (!STANDALONE) return;
     const onPop = () => {
-      const item = nav.find((entry) => entry.path === window.location.pathname);
-      if (item) void callTool(item.tool);
+      const here = window.location.pathname;
+      const next = localeFromPath(here);
+      const item = nav.find((entry) => pathFor(entry.path, next) === here);
+      setLocale(next);
+      if (item) {
+        void callTool(
+          item.tool,
+          item.tool === "LIST_PUBLIC_WRITING" ? { locale: next } : {},
+        );
+      }
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -136,10 +185,21 @@ export function App() {
               }
               onClick={() => open(item.tool, item.path)}
             >
-              {item.label}
+              {item.label[locale]}
             </button>
           ))}
         </nav>
+
+        {STANDALONE && (
+          <LanguageSwitch
+            locale={locale}
+            onSwitch={(next) => {
+              const current =
+                nav.find((item) => item.tool === toolName) ?? nav[0];
+              open(current?.tool ?? "LIST_PUBLIC_WRITING", current?.path, next);
+            }}
+          />
+        )}
 
         {STANDALONE && <ThemeToggle />}
 
@@ -176,6 +236,38 @@ export function App() {
         />
       </section>
     </main>
+  );
+}
+
+/**
+ * PT / EN, exactly as the site presents it.
+ *
+ * Switching keeps you on the view you were reading rather than sending you home,
+ * which is the one thing vibegui.com's own switch does not do.
+ */
+function LanguageSwitch({
+  locale,
+  onSwitch,
+}: {
+  locale: Locale;
+  onSwitch: (next: Locale) => void;
+}) {
+  return (
+    <p className="language-switch">
+      {(["pt-BR", "en"] as const).map((option, index) => (
+        <span key={option}>
+          {index > 0 && <span aria-hidden="true"> / </span>}
+          <button
+            type="button"
+            className={option === locale ? "is-active" : ""}
+            aria-current={option === locale ? "true" : undefined}
+            onClick={() => onSwitch(option)}
+          >
+            {option === "en" ? "EN" : "PT"}
+          </button>
+        </span>
+      ))}
+    </p>
   );
 }
 

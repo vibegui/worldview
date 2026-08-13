@@ -9,6 +9,14 @@ export interface PublicWriting {
   tags: string[];
   coverImage: string | null;
   url: string;
+  /** Locale-correct site path, straight from the manifest. */
+  path?: string;
+  /** "pt-BR" | "en" — the manifest holds every locale in one list. */
+  locale: string;
+  /** Joins the two language versions of one piece. */
+  translationKey?: string;
+  /** Path to the other locale's version, when there is one. */
+  alternatePath?: string;
 }
 
 interface Manifest {
@@ -35,7 +43,10 @@ export async function getDeclaration(env: Env) {
   };
 }
 
-export async function listPublicWriting(env: Env): Promise<PublicWriting[]> {
+export async function listPublicWriting(
+  env: Env,
+  locale?: string,
+): Promise<PublicWriting[]> {
   // The module config wins over the wrangler var. Both existed, only the var was
   // read, so an instance could configure a site origin and silently be ignored —
   // which showed up as a 404 against whatever the var still pointed at.
@@ -56,14 +67,20 @@ export async function listPublicWriting(env: Env): Promise<PublicWriting[]> {
   return (manifest.articles ?? [])
     .filter(
       (article): article is Omit<PublicWriting, "url"> =>
-        article.status === "published" && SLUG_PATTERN.test(article.slug),
+        article.status === "published" &&
+        SLUG_PATTERN.test(article.slug) &&
+        // One manifest carries every language. Without this the list is both at
+        // once, so each piece appears twice under two titles.
+        (!locale || article.locale === locale),
     )
     .map((article) => ({
       ...article,
       status: "published",
       tags: article.tags ?? [],
       coverImage: article.coverImage ?? null,
-      url: `${siteOrigin}/article/${article.slug}`,
+      // The manifest already knows each locale's path; `/article/<slug>` is only
+      // correct for pt-BR and silently 301s or misses for the rest.
+      url: `${siteOrigin}${article.path ?? `/article/${article.slug}`}`,
     }));
 }
 

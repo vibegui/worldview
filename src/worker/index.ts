@@ -33,13 +33,13 @@ import { EVENT_NAME_RE, pruneEvents, track } from "./track.ts";
 export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
   const SERVICE_NAME = config.worldview.instance;
 
+  // Every view, in both languages. `/en/...` mirrors the site, where the URL is
+  // the source of truth for language rather than a cookie.
+  const VIEWS = ["/", "/declaration", "/projects", "/analytics", "/learning", "/bookmarks"];
   const VIEW_PATHS = new Set([
-    "/",
-    "/declaration",
-    "/projects",
-    "/analytics",
-    "/learning",
-    "/bookmarks",
+    ...VIEWS,
+    ...VIEWS.map((view) => (view === "/" ? "/en/" : `/en${view}`)),
+    "/en",
   ]);
 
   return {

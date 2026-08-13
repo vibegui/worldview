@@ -2608,3 +2608,30 @@ button.analytics-row:focus-visible .analytics-fill {
     order: -1;
   }
 }
+
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--border);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.language-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 0;
+}
+
+.language-switch button.is-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.language-switch button:hover {
+  color: var(--text);
+}
