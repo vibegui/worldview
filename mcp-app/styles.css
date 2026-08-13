@@ -9,6 +9,7 @@
   --serie-outros: #8a5fc8;
   color-scheme: light dark;
 
+  --content-width: 48rem;
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-serif: Newsreader, Georgia, "Times New Roman", serif;
 
@@ -72,29 +73,59 @@ button {
 }
 
 .shell {
-  width: min(100%, 48rem);
-  margin: 0 auto;
-  padding: 28px;
+  width: 100%;
+}
+
+/* vibegui.com's layout, value for value: a 1024px container, and inside it a
+   48rem reading column that is left-aligned rather than centred. The asymmetry
+   is the look — centring the column moves every line 100px right. */
+.container {
+  width: 100%;
+  max-width: 1024px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-inline: 1.5rem;
+  }
+}
+
+.content {
+  padding-bottom: 4rem;
+}
+
+.content > *,
+.writing-list,
+.declaration,
+.project-list,
+.section-heading {
+  max-width: var(--content-width, 48rem);
 }
 
 /* One row: name, views, sign out. The nav used to sit on its own line under the
    name, which spent a whole band of vertical space on a word and a button. */
 .topbar {
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-inner {
   display: flex;
   align-items: center;
   gap: 24px;
-  margin-bottom: 24px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid var(--border);
+  min-height: 64px;
 }
 
 /* The nav takes the slack so the sign out button stays pinned right. min-width
    lets it shrink and scroll instead of shoving the button off screen. */
-.topbar .nav {
+.topbar-inner .nav {
   min-width: 0;
-  flex: 1;
   margin-bottom: 0;
+  margin-left: auto;
   border-bottom: 0;
+  gap: 4px;
 }
 
 .section-heading h2,
@@ -119,9 +150,10 @@ button {
   margin: 0;
   color: var(--text);
   font-family: var(--font-serif);
-  font-size: 1.15rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 28px;
 }
 
 .connection {
@@ -193,7 +225,9 @@ button {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -2429,15 +2463,17 @@ button.analytics-row:focus-visible .analytics-fill {
 .writing-date {
   margin: 0 0 10px;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 12px;
+  letter-spacing: 0.025em;
+  line-height: 16px;
 }
 
 .writing-item h2 {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  font-size: 30px;
   font-weight: 500;
-  letter-spacing: -0.02em;
+  letter-spacing: normal;
   line-height: 1.15;
 }
 
@@ -2454,7 +2490,8 @@ button.analytics-row:focus-visible .analytics-fill {
   max-width: 65ch;
   margin: 12px 0 0;
   color: var(--muted);
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 26px;
 }
 
 .writing-more {
@@ -2467,4 +2504,17 @@ button.analytics-row:focus-visible .analytics-fill {
 
 .writing-more:hover {
   color: var(--accent);
+}
+
+.theme-toggle {
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
 }

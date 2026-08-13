@@ -37,7 +37,7 @@ const NAV_ITEMS = [
   { label: "Projects", tool: "GET_PORTFOLIO" },
   { label: "Analytics", tool: "SITES_OVERVIEW" },
   { label: "Learning", tool: "RECALL_MEMORY" },
-  { label: "Library", tool: "LIST_ALL_BOOKMARKS", publicTool: "LIST_BOOKMARKS" },
+  { label: "Bookmarks", tool: "LIST_ALL_BOOKMARKS", publicTool: "LIST_BOOKMARKS" },
 ] as const;
 
 export function App() {
@@ -75,7 +75,11 @@ export function App() {
 
   return (
     <main className={`shell ${bookmarksActive ? "bookmarks-shell" : ""}`}>
+      {/* The header is full-bleed with its rule spanning the viewport, and only
+          its contents are constrained — same as vibegui.com, where a centered
+          box for everything would put the rule in the wrong place. */}
       <header className="topbar">
+        <div className="container topbar-inner">
         <p className="os-label">{declaration.name ?? "Worldview"}</p>
 
         <nav className="nav" aria-label="Worldview views">
@@ -96,26 +100,25 @@ export function App() {
           ))}
         </nav>
 
+        {STANDALONE && <ThemeToggle />}
+
         {STANDALONE ? (
-          signedIn ? (
+          signedIn && (
             <form method="post" action="/logout">
               <button type="submit" className="signout">
                 Sign out
               </button>
             </form>
-          ) : (
-            <a className="signout" href="/login">
-              Sign in
-            </a>
           )
         ) : (
           <span className={`connection ${connected ? "online" : ""}`}>
             {connected ? "Private Studio" : "Connecting"}
           </span>
         )}
+        </div>
       </header>
 
-      <section className="content" aria-live="polite">
+      <section className="container content" aria-live="polite">
         <ResultView
           toolName={toolName}
           result={asRecord(toolResult)}
@@ -125,6 +128,33 @@ export function App() {
         />
       </section>
     </main>
+  );
+}
+
+/**
+ * Light and dark, remembered. The same control and the same storage key as
+ * vibegui.com, so a reader who set a preference on one keeps it on the other.
+ * Hidden inside an MCP host, where the host owns the theme.
+ */
+function ThemeToggle() {
+  const [theme, setTheme] = useState(
+    () => document.documentElement.dataset.theme ?? "dark",
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+    >
+      {theme === "dark" ? "☀" : "☾"}
+    </button>
   );
 }
 
