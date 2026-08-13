@@ -25,6 +25,9 @@ interface McpViewState {
 interface McpContextValue extends McpViewState {
   callTool: <T>(name: string, args?: Record<string, unknown>) => Promise<T>;
   hostContext?: McpUiHostContext;
+  /** Tool names this caller is allowed to use, as the server reports them. */
+  available: string[];
+  signedIn: boolean;
 }
 
 const McpContext = createContext<McpContextValue | null>(null);
@@ -42,10 +45,7 @@ const STANDALONE =
 
 let rpcId = 0;
 
-async function callToolOverHttp(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<unknown> {
+async function rpc(method: string, params?: unknown): Promise<any> {
   const response = await fetch("/mcp", {
     method: "POST",
     credentials: "include",
@@ -53,25 +53,24 @@ async function callToolOverHttp(
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: (rpcId += 1),
-      method: "tools/call",
-      params: { name, arguments: args },
+      method,
+      ...(params ? { params } : {}),
     }),
   });
-
   if (response.status === 401) {
-    // The session expired. In production `/` is the login form; under the dev
-    // server vite owns `/`, so the worker origin is passed in — otherwise this
-    // bounces between two pages that both say nothing.
-    const login =
-      (window as { __LOGIN_URL__?: string }).__LOGIN_URL__ ?? "/";
+    const login = (window as { __LOGIN_URL__?: string }).__LOGIN_URL__ ?? "/";
     window.location.assign(login);
     throw new Error("Session expired");
   }
-  if (!response.ok) {
-    throw new Error(`${name} failed (${response.status})`);
-  }
+  if (!response.ok) throw new Error(`${method} failed (${response.status})`);
+  return response.json();
+}
 
-  const payload = (await response.json()) as {
+async function callToolOverHttp(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  const payload = (await rpc("tools/call", { name, arguments: args })) as {
     error?: { message?: string };
     result?: {
       isError?: boolean;
@@ -100,6 +99,27 @@ export function McpProvider({ children }: { children: ReactNode }) {
   const [hostContext, setHostContext] = useState<
     McpUiHostContext | undefined
   >();
+  const [available, setAvailable] = useState<string[]>([]);
+
+  // The server is the only thing that knows what this caller may do, so the app
+  // asks rather than assuming. That is what lets one bundle serve an anonymous
+  // visitor and its owner without a second frontend or a mode flag.
+  useEffect(() => {
+    if (!STANDALONE) return;
+    let cancelled = false;
+    rpc("tools/list")
+      .then((payload) => {
+        if (cancelled) return;
+        const names = (payload?.result?.tools ?? []).map(
+          (tool: { name: string }) => tool.name,
+        );
+        setAvailable(names);
+      })
+      .catch(() => setAvailable([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onAppCreated = useCallback((created: App) => {
     created.ontoolinput = (params) => {
@@ -219,8 +239,16 @@ export function McpProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ ...view, callTool, hostContext }),
-    [callTool, hostContext, view],
+    () => ({
+      ...view,
+      callTool,
+      hostContext,
+      available,
+      // A private-only tool showing up is proof of a session; nothing else the
+      // browser can see distinguishes the two tiers.
+      signedIn: available.includes("GET_STATUS"),
+    }),
+    [available, callTool, hostContext, view],
   );
 
   return <McpContext.Provider value={value}>{children}</McpContext.Provider>;

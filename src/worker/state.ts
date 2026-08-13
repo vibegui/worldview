@@ -268,7 +268,7 @@ export async function updateScorecardItem(
  * row for a project nobody declared is dropped, because state about a project
  * that does not exist is not information.
  */
-export async function getPortfolio(env: Env) {
+export async function getPortfolio(env: Env, publicOnly = false) {
   const stateRows = await env.DB.prepare(
     `SELECT
       p.*,
@@ -284,7 +284,11 @@ export async function getPortfolio(env: Env) {
   );
   const rank: Record<string, number> = { active: 0, draft: 1, archived: 3 };
 
-  const projects = env.projects
+  const visible = publicOnly
+    ? env.projects.filter((project) => project.isPublic)
+    : env.projects;
+
+  const projects = visible
     .map((declared) => {
       const state = stateById.get(declared.id);
       const lifecycle = String(
@@ -305,10 +309,16 @@ export async function getPortfolio(env: Env) {
         next_review: state?.next_review ?? declared.initialNextReview ?? null,
         progress_percent: state?.progress_percent ?? null,
         progress_note: String(state?.progress_note ?? ""),
-        active_goal_count: Number(state?.active_goal_count ?? 0),
-        inbox_count: Number(state?.inbox_count ?? 0),
-        open_work_item_count: Number(state?.open_work_item_count ?? 0),
-        last_activity_at: state?.last_activity_at ?? null,
+        // Goal, inbox, and work-item counts are operational: they describe how
+        // the work is being run, not what was declared or how far it got.
+        ...(publicOnly
+          ? {}
+          : {
+              active_goal_count: Number(state?.active_goal_count ?? 0),
+              inbox_count: Number(state?.inbox_count ?? 0),
+              open_work_item_count: Number(state?.open_work_item_count ?? 0),
+              last_activity_at: state?.last_activity_at ?? null,
+            }),
         updated_at: state?.updated_at ?? null,
       };
     })

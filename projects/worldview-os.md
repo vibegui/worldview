@@ -3,6 +3,7 @@ id: worldview-os
 name: Worldview OS
 repo: example/worldview
 lifecycle: active
+public: true
 serves: [agency, multiplication]
 ---
 

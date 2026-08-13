@@ -104,7 +104,7 @@ export async function dispatchMcp(
         throw rpcErrorValue(-32601, `Unknown tool: ${name}`);
       }
 
-      const output = await tool.execute(env, args);
+      const output = await tool.execute(env, args, access);
       return {
         content: [
           {

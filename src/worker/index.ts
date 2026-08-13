@@ -206,14 +206,24 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
       return handleLogout(url);
     }
 
-    // The standalone entry point: the same UI bundle an MCP host reads as a
-    // resource, served to a browser once it holds a session.
+    if (request.method === "GET" && url.pathname === "/login") {
+      return access === "private"
+        ? Response.redirect(new URL("/", url).toString(), 303)
+        : loginPage(url);
+    }
+
+    // The standalone entry point, and the public face. Anonymous visitors get
+    // the same bundle; the server decides what it may show them, and the app
+    // builds its nav from the tools it is actually allowed to call. One
+    // codebase, one boundary, no second frontend to keep in sync.
     if (request.method === "GET" && url.pathname === "/") {
-      if (access !== "private") return loginPage(url);
       return new Response(appHtml(env, null, true), {
         headers: {
           "content-type": "text/html; charset=utf-8",
-          "cache-control": "no-store",
+          // A signed-in view must not be cached by anything in front of the
+          // worker; the anonymous one is the same bytes for everyone.
+          "cache-control":
+            access === "private" ? "no-store" : "public, max-age=60",
           "x-content-type-options": "nosniff",
         },
       });

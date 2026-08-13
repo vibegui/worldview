@@ -63,7 +63,15 @@ export interface ToolDefinition {
   access: AccessLevel;
   inputSchema: Record<string, unknown>;
   _meta?: { ui: { resourceUri: string } };
-  execute: (env: Env, input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * `access` lets one tool serve both tiers with a narrower payload for
+   * strangers, rather than duplicating it into a public twin that drifts.
+   */
+  execute: (
+    env: Env,
+    input: Record<string, unknown>,
+    access: AccessLevel,
+  ) => Promise<unknown>;
 }
 
 const objectSchema = (
@@ -460,19 +468,20 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_DECLARATION",
     description:
-      "Answer the three questions this system exists for: what my life is about (the declared future, from git), what game I am playing (the strategic results and conditions of satisfaction), and whether I am playing it well (alignment and integrity). Read this before recommending priorities.",
-    access: "private",
+      "What my life is about, what game I am playing, and whether I am playing it well: the declared future, the strategic results with their progress, the conditions of satisfaction, and the two scores. Public — the gap between what was declared and what is measured is meant to be checkable by someone other than its author.",
+    access: "public",
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env) => {
-      // The long-form charter is an optional extra: an instance that publishes
-      // one gets it nested under the declared future, and one that does not
-      // still gets a working declaration. Fetching it must never be able to
-      // fail the whole tool.
+    execute: async (env, _input, access) => {
+      void _input;
+      // The long-form charter is optional detail: an instance that publishes one
+      // gets it nested under the declared future, and one that does not still
+      // gets a working declaration. Fetching it must never fail the whole tool.
       const [declaration, dashboard] = await Promise.all([
         getDeclaration(env).catch(() => null),
         getDeclarationDashboard(env),
       ]);
+
       return {
         what_my_life_is_about: {
           declared_future: env.worldview.declaredFuture,
@@ -480,11 +489,13 @@ export const tools: ToolDefinition[] = [
           long_form: declaration,
         },
         what_game_i_am_playing: {
-          strategic_results: dashboard.strategic_results,
           conditions_of_satisfaction: env.worldview.conditionsOfSatisfaction,
+          strategic_results: dashboard.strategic_results,
         },
         am_i_playing_it_well: dashboard.scores,
-        diagnostics: dashboard.diagnostics,
+        // Diagnostics sit beneath the two scores and are working detail, not the
+        // declaration. They stay private.
+        ...(access === "private" ? { diagnostics: dashboard.diagnostics } : {}),
       };
     },
   },
@@ -540,11 +551,18 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_PORTFOLIO",
     description:
-      "Open the private Worldview OS project map: draft, active, and archived projects with goals, progress, work, and activity.",
-    access: "private",
+      "The project map: what is being worked on, which declared strategic result each one serves, and how far along it is. Publicly this returns only projects that opted in with `public: true`, and never their prose — a project file states positions about work other people own.",
+    access: "public",
     inputSchema: objectSchema({}),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env) => getPortfolio(env),
+    execute: async (env, _input, access) => {
+      void _input;
+      const portfolio = await getPortfolio(env, access !== "private");
+      if (access === "private") return portfolio;
+      // Unfiled captures are an inbox, and the daily brief is working notes.
+      // Neither is a declaration.
+      return { projects: portfolio.projects };
+    },
   },
   {
     name: "SET_PROJECT_STATE",

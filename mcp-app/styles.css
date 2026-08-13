@@ -2389,3 +2389,14 @@ button.analytics-row:focus-visible .analytics-fill {
     transition-duration: 1ms !important;
   }
 }
+
+/* A public project card opens nothing: the detail view is private. Keep the
+   shape, drop the affordance. */
+.project-card.static {
+  cursor: default;
+}
+
+.project-card.static .project-open,
+.project-card.static [aria-hidden="true"] {
+  visibility: hidden;
+}

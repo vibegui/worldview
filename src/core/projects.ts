@@ -34,6 +34,14 @@ export interface DeclaredProject {
   /** Prose, everything after the frontmatter. */
   body: string;
   /**
+   * Whether this project appears to an anonymous visitor. Opt-in, and the
+   * default is no: a project file states positions about work other people own,
+   * and a system whose default leaks is wrong however good its transparency
+   * story is. Even when public, the free prose body stays private — the
+   * competitive sections live there.
+   */
+  isPublic: boolean;
+  /**
    * Initial lifecycle and review date, used only until D1 has a row for this
    * project. After that D1 is authoritative, because those are the fields you
    * flip in conversation rather than in a commit.
@@ -155,6 +163,7 @@ export function parseProject(markdown: string): DeclaredProject | null {
     outcomeDetail: section(body, "Declared outcome"),
     successCriteria: listItems(section(body, "Success criteria")),
     body,
+    isPublic: one("public").toLowerCase() === "true",
     initialLifecycle: one("lifecycle") || undefined,
     initialNextReview: one("next_review") || undefined,
   };
@@ -164,6 +173,19 @@ export function parseProjects(sources: string[] = []): DeclaredProject[] {
   return sources
     .map(parseProject)
     .filter((project): project is DeclaredProject => project !== null);
+}
+
+/** What an anonymous visitor may see of a project: never the prose body. */
+export function publicProject(project: DeclaredProject) {
+  return {
+    id: project.id,
+    name: project.name,
+    repo: project.repo ?? null,
+    serves: project.serves,
+    spirit: project.spirit,
+    outcome: project.outcome,
+    successCriteria: project.successCriteria,
+  };
 }
 
 /** Everything wrong with the declared projects. Empty means valid. */

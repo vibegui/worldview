@@ -2,6 +2,7 @@
 id: newsletter
 name: Newsletter
 lifecycle: active
+public: true
 serves: []
 ---
 

@@ -3,6 +3,7 @@ id: atlas
 name: Atlas
 repo: example/atlas
 lifecycle: active
+public: true
 serves: [understanding]
 ---
 

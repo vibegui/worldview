@@ -25,26 +25,52 @@ type JsonRecord = Record<string, unknown>;
 // they are performing, keep what you learned, and accumulate what you learned
 // from. Goals and Inbox are gone as destinations — a goal belongs to the project
 // it serves, and an unfiled capture surfaces at the top of Projects.
+//
+// Each tab names the tool it opens, and a tab only renders when the server says
+// this caller may call it. So a stranger sees the declaration and the library;
+// the owner sees the same page with more of it. One boundary, already enforced
+// twice on the server, deciding the navigation too — rather than a second
+// public frontend that drifts from this one.
 const NAV_ITEMS = [
   { label: "Declaration", tool: "GET_DECLARATION" },
   { label: "Projects", tool: "GET_PORTFOLIO" },
   { label: "Analytics", tool: "SITES_OVERVIEW" },
   { label: "Learning", tool: "RECALL_MEMORY" },
-  { label: "Library", tool: "LIST_ALL_BOOKMARKS" },
+  { label: "Library", tool: "LIST_ALL_BOOKMARKS", publicTool: "LIST_BOOKMARKS" },
 ] as const;
 
 export function App() {
-  const { connected, loading, toolName, toolResult, error, callTool } =
-    useMcp();
+  const {
+    connected,
+    loading,
+    toolName,
+    toolResult,
+    error,
+    callTool,
+    available,
+    signedIn,
+  } = useMcp();
   const initialized = useRef(false);
   const bookmarksActive = isBookmarkTool(toolName);
 
+  // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
+  const nav = STANDALONE
+    ? NAV_ITEMS.map((item) => ({
+        ...item,
+        tool:
+          "publicTool" in item && !available.includes(item.tool)
+            ? item.publicTool
+            : item.tool,
+      })).filter((item) => available.includes(item.tool))
+    : NAV_ITEMS.map((item) => ({ ...item, tool: item.tool as string }));
+
   useEffect(() => {
     if (!connected || initialized.current) return;
+    if (STANDALONE && !nav.length) return;
     initialized.current = true;
     const bootFlag = (window as { __BOOT_TOOL__?: string }).__BOOT_TOOL__;
-    void callTool(bootFlag ?? toolName ?? "GET_DECLARATION");
-  }, [callTool, connected, toolName]);
+    void callTool(bootFlag ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION");
+  }, [callTool, connected, nav, toolName]);
 
   return (
     <main className={`shell ${bookmarksActive ? "bookmarks-shell" : ""}`}>
@@ -52,7 +78,7 @@ export function App() {
         <p className="os-label">{declaration.name ?? "Worldview"}</p>
 
         <nav className="nav" aria-label="Worldview views">
-          {NAV_ITEMS.map((item) => (
+          {nav.map((item) => (
             <button
               type="button"
               key={item.tool}
@@ -70,11 +96,17 @@ export function App() {
         </nav>
 
         {STANDALONE ? (
-          <form method="post" action="/logout">
-            <button type="submit" className="signout">
-              Sign out
-            </button>
-          </form>
+          signedIn ? (
+            <form method="post" action="/logout">
+              <button type="submit" className="signout">
+                Sign out
+              </button>
+            </form>
+          ) : (
+            <a className="signout" href="/login">
+              Sign in
+            </a>
+          )
         ) : (
           <span className={`connection ${connected ? "online" : ""}`}>
             {connected ? "Private Studio" : "Connecting"}
@@ -202,12 +234,20 @@ function PortfolioView({
   prepareBrief: () => void;
 }) {
   const projects = asRecords(result.projects);
-  const dailyBrief = asNullableRecord(result.daily_brief);
   const unfiled = asRecords(result.unfiled);
+  // The brief is working notes, so the public payload omits the key entirely.
+  // Its empty state still says "prepare the current evidence", which is an
+  // instruction to an owner who is not here.
+  const operational = "daily_brief" in result;
 
   return (
     <>
-      <DailyBriefHomeCard brief={dailyBrief} prepare={prepareBrief} />
+      {operational && (
+        <DailyBriefHomeCard
+          brief={asNullableRecord(result.daily_brief)}
+          prepare={prepareBrief}
+        />
+      )}
 
       {/* Captures that belong to no project yet. Everything else is reachable
           through the project it is filed under; this is the only home these
@@ -240,11 +280,16 @@ function PortfolioView({
       ) : (
         <div className="project-list">
           {projects.map((project) => (
+            // GET_PROJECT is private, so publicly a card is a card, not a link
+            // into a detail view that would answer with "Unknown tool".
             <button
               type="button"
-              className="project-card"
+              className={`project-card ${operational ? "" : "static"}`}
               key={text(project.id)}
-              onClick={() => openProject(text(project.id))}
+              disabled={!operational}
+              onClick={
+                operational ? () => openProject(text(project.id)) : undefined
+              }
             >
               <div className="project-identity">
                 <div className="project-title">
@@ -268,11 +313,15 @@ function PortfolioView({
                 <p className="spirit">
                   {text(project.spirit) || text(project.description)}
                 </p>
-                <footer>
-                  <span>{number(project.active_goal_count)} active goals</span>
-                  <span>{number(project.open_work_item_count)} open items</span>
-                  <span>{relativeTime(project.last_activity_at)}</span>
-                </footer>
+                {operational && (
+                  <footer>
+                    <span>{number(project.active_goal_count)} active goals</span>
+                    <span>
+                      {number(project.open_work_item_count)} open items
+                    </span>
+                    <span>{relativeTime(project.last_activity_at)}</span>
+                  </footer>
+                )}
               </div>
               <div className="project-outcome">
                 <span className="project-label">Current outcome</span>

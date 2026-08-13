@@ -9,6 +9,7 @@ import {
 
 import declarationJson from "../worldview.json" with { type: "json" };
 import { resolveWorldview } from "../src/core/worldview.ts";
+import { parseProjects, publicProject } from "../src/core/projects.ts";
 
 const worldview = resolveWorldview({ declaration: declarationJson });
 
@@ -25,7 +26,7 @@ const env = {
 const bare = { worldview, projects: [] } as unknown as Env;
 
 describe("MCP capability boundary", () => {
-  test("public clients see only public writing tools", async () => {
+  test("public clients see the declaration layer and nothing operational", async () => {
     const result = (await dispatchMcp(env, "public", "tools/list")) as {
       tools: Array<{ name: string }>;
     };
@@ -36,8 +37,13 @@ describe("MCP capability boundary", () => {
     expect(names).toContain("LIST_BOOKMARKS");
     expect(names).toContain("SEARCH_BOOKMARKS");
     expect(names).toContain("GET_BOOKMARK");
-    expect(names).not.toContain("GET_PORTFOLIO");
+    // The declaration and the project map are the public face; everything that
+    // is working state is not.
+    expect(names).toContain("GET_DECLARATION");
+    expect(names).toContain("GET_PORTFOLIO");
     expect(names).not.toContain("RECALL_MEMORY");
+    expect(names).not.toContain("GET_PROJECT");
+    expect(names).not.toContain("GET_DAILY_BRIEF");
     expect(names).not.toContain("CREATE_BOOKMARK");
     expect(names).not.toContain("UPDATE_BOOKMARK");
     expect(names).not.toContain("DELETE_BOOKMARK");
@@ -105,8 +111,8 @@ describe("MCP capability boundary", () => {
   test("guessed private tool calls fail for public clients", async () => {
     expect(
       dispatchMcp(env, "public", "tools/call", {
-        name: "GET_PORTFOLIO",
-        arguments: {},
+        name: "GET_PROJECT",
+        arguments: { id: "anything" },
       }),
     ).rejects.toThrow("Unknown tool");
     expect(
@@ -167,5 +173,53 @@ describe("MCP capability boundary", () => {
         score: 0.9,
       },
     ]);
+  });
+});
+
+describe("what a stranger may see", () => {
+  const projects = parseProjects([
+    `---\nid: open\nname: Open\nserves: [agency]\npublic: true\n---\n\n**Spirit:** shown.\n\n## Declared outcome\n\nVisible.\n\n## Competing with a colleague\n\nNot for the internet.\n`,
+    `---\nid: closed\nname: Closed\nserves: [agency]\n---\n\n**Spirit:** hidden.\n\n## Declared outcome\n\nInvisible.\n`,
+  ]);
+
+  test("a project is private until it says otherwise", () => {
+    // The default has to be closed. A project file states positions about work
+    // other people own, so a system that leaks by default is wrong however good
+    // its transparency story is.
+    expect(projects.find((p) => p.id === "open")?.isPublic).toBe(true);
+    expect(projects.find((p) => p.id === "closed")?.isPublic).toBe(false);
+  });
+
+  test("the public shape of a project never carries its prose", () => {
+    const open = projects.find((p) => p.id === "open")!;
+    const shape = publicProject(open);
+    expect(shape.outcome).toBe("Visible.");
+    // The competitive sections live in the body, which is why it is omitted
+    // entirely rather than filtered.
+    expect(JSON.stringify(shape)).not.toContain("Competing with a colleague");
+    expect("body" in shape).toBe(false);
+  });
+
+  test("the declaration is public but its diagnostics are not", async () => {
+    const withProjects = { ...env, projects } as Env;
+    const anonymous = (await dispatchMcp(withProjects, "public", "tools/list")) as {
+      tools: Array<{ name: string }>;
+    };
+    const names = anonymous.tools.map((tool) => tool.name);
+
+    expect(names).toContain("GET_DECLARATION");
+    expect(names).toContain("GET_PORTFOLIO");
+    // Everything operational stays behind the password.
+    for (const absent of [
+      "GET_DAILY_BRIEF",
+      "RECALL_MEMORY",
+      "LIST_DECISIONS",
+      "GET_INBOX",
+      "GET_PROJECT",
+      "SET_PROJECT_STATE",
+      "SITES_OVERVIEW",
+    ]) {
+      expect(names, `${absent} is public`).not.toContain(absent);
+    }
   });
 });
