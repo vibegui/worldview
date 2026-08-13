@@ -44,12 +44,17 @@ interface Hero {
 // twice on the server, deciding the navigation too — rather than a second
 // public frontend that drifts from this one.
 const NAV_ITEMS = [
-  { label: "Writing", tool: "LIST_PUBLIC_WRITING" },
-  { label: "Declaration", tool: "GET_DECLARATION" },
-  { label: "Projects", tool: "GET_PORTFOLIO" },
-  { label: "Analytics", tool: "SITES_OVERVIEW" },
-  { label: "Learning", tool: "RECALL_MEMORY" },
-  { label: "Bookmarks", tool: "LIST_ALL_BOOKMARKS", publicTool: "LIST_BOOKMARKS" },
+  { label: "Writing", tool: "LIST_PUBLIC_WRITING", path: "/" },
+  { label: "Declaration", tool: "GET_DECLARATION", path: "/declaration" },
+  { label: "Projects", tool: "GET_PORTFOLIO", path: "/projects" },
+  { label: "Analytics", tool: "SITES_OVERVIEW", path: "/analytics" },
+  { label: "Learning", tool: "RECALL_MEMORY", path: "/learning" },
+  {
+    label: "Bookmarks",
+    tool: "LIST_ALL_BOOKMARKS",
+    publicTool: "LIST_BOOKMARKS",
+    path: "/bookmarks",
+  },
 ] as const;
 
 export function App() {
@@ -77,13 +82,37 @@ export function App() {
       })).filter((item) => available.includes(item.tool))
     : NAV_ITEMS.map((item) => ({ ...item, tool: item.tool as string }));
 
+  // A tab is a place, so it gets a URL: shareable, refreshable, and back works.
+  // The worker serves the same bundle on every path, so routing is entirely the
+  // question of which tool to open.
+  const open = (tool: string, path?: string) => {
+    if (STANDALONE && path && window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+    void callTool(tool);
+  };
+
   useEffect(() => {
     if (!connected || initialized.current) return;
     if (STANDALONE && !nav.length) return;
     initialized.current = true;
     const bootFlag = (window as { __BOOT_TOOL__?: string }).__BOOT_TOOL__;
-    void callTool(bootFlag ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION");
+    const routed = STANDALONE
+      ? nav.find((item) => item.path === window.location.pathname)?.tool
+      : undefined;
+    void callTool(bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION");
   }, [callTool, connected, nav, toolName]);
+
+  // Back and forward move between tabs rather than out of the app.
+  useEffect(() => {
+    if (!STANDALONE) return;
+    const onPop = () => {
+      const item = nav.find((entry) => entry.path === window.location.pathname);
+      if (item) void callTool(item.tool);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [callTool, nav]);
 
   return (
     <main className="shell">
@@ -105,7 +134,7 @@ export function App() {
                   ? "active"
                   : ""
               }
-              onClick={() => void callTool(item.tool)}
+              onClick={() => open(item.tool, item.path)}
             >
               {item.label}
             </button>
@@ -143,6 +172,7 @@ export function App() {
           callTool={callTool}
           loading={loading}
           error={error}
+          available={available}
         />
       </section>
     </main>
@@ -182,17 +212,20 @@ function ResultView({
   callTool,
   loading,
   error,
+  available,
 }: {
   toolName?: string;
   result: JsonRecord;
   callTool: <T>(name: string, args?: Record<string, unknown>) => Promise<T>;
   loading: boolean;
   error?: string;
+  available: string[];
 }) {
   if (isBookmarkTool(toolName) || Array.isArray(result.bookmarks)) {
     return (
       <BookmarksView
         activeTool={toolName}
+        available={available}
         result={result}
         loading={loading}
         error={error}

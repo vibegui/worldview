@@ -5,6 +5,8 @@ type CallTool = <T>(name: string, args?: Record<string, unknown>) => Promise<T>;
 
 interface BookmarksViewProps {
   activeTool?: string;
+  /** Tool names the server says this caller may use. */
+  available?: string[];
   result: JsonRecord;
   loading: boolean;
   error?: string;
@@ -49,13 +51,37 @@ export function isBookmarkTool(name?: string): boolean {
   return Boolean(name && BOOKMARK_TOOL_NAMES.has(name));
 }
 
+/**
+ * The same view serves both tiers, so it has to answer to both names.
+ *
+ * A stranger's tool is LIST_BOOKMARKS and the owner's is LIST_ALL_BOOKMARKS.
+ * Matching only the owner's meant a visitor got a fully rendered workspace
+ * reporting "No bookmarks loaded" over a payload of ten.
+ */
+const LIST_TOOLS = new Set(["LIST_ALL_BOOKMARKS", "LIST_BOOKMARKS"]);
+const SEARCH_TOOLS = new Set(["SEARCH_ALL_BOOKMARKS", "SEARCH_BOOKMARKS"]);
+const DETAIL_TOOLS = new Set([
+  "GET_BOOKMARK_ADMIN",
+  "GET_BOOKMARK",
+  "CREATE_BOOKMARK",
+  "UPDATE_BOOKMARK",
+  "ENRICH_BOOKMARK",
+]);
+
 export function BookmarksView({
   activeTool,
+  available,
   result,
   loading,
   error,
   callTool,
 }: BookmarksViewProps) {
+  // Which tool this caller actually has. Reloading with the owner's name as a
+  // visitor answers "Unknown tool", which the boundary is right to do and the
+  // view is wrong to ask for.
+  const owner = (available ?? []).includes("LIST_ALL_BOOKMARKS");
+  const listTool = owner ? "LIST_ALL_BOOKMARKS" : "LIST_BOOKMARKS";
+  const searchTool = owner ? "SEARCH_ALL_BOOKMARKS" : "SEARCH_BOOKMARKS";
   const [bookmarks, setBookmarks] = useState<JsonRecord[]>([]);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<JsonRecord | null>(null);
@@ -76,7 +102,7 @@ export function BookmarksView({
 
   useEffect(() => {
     if (
-      activeTool === "LIST_ALL_BOOKMARKS" &&
+      LIST_TOOLS.has(activeTool ?? "") &&
       Array.isArray(result.bookmarks)
     ) {
       const next = asRecords(result.bookmarks).map(normalizeBookmark);
@@ -90,7 +116,7 @@ export function BookmarksView({
     }
 
     if (
-      activeTool === "SEARCH_ALL_BOOKMARKS" &&
+      SEARCH_TOOLS.has(activeTool ?? "") &&
       Array.isArray(result.results)
     ) {
       setBookmarks(
@@ -102,10 +128,7 @@ export function BookmarksView({
     }
 
     if (
-      (activeTool === "GET_BOOKMARK_ADMIN" ||
-        activeTool === "CREATE_BOOKMARK" ||
-        activeTool === "UPDATE_BOOKMARK" ||
-        activeTool === "ENRICH_BOOKMARK") &&
+      DETAIL_TOOLS.has(activeTool ?? "") &&
       isRecord(result.bookmark)
     ) {
       const bookmark = normalizeBookmark(result.bookmark);
@@ -172,9 +195,7 @@ export function BookmarksView({
     clearMessages();
     setOperation("loading");
     try {
-      const response = await callTool<{ bookmarks?: unknown[] }>(
-        "LIST_ALL_BOOKMARKS",
-      );
+      const response = await callTool<{ bookmarks?: unknown[] }>(listTool);
       const next = asRecords(response.bookmarks).map(normalizeBookmark);
       setBookmarks(next);
       setSearchMode(false);
@@ -202,10 +223,9 @@ export function BookmarksView({
     clearMessages();
     setOperation("searching");
     try {
-      const response = await callTool<{ results?: unknown[] }>(
-        "SEARCH_ALL_BOOKMARKS",
-        { query: trimmed },
-      );
+      const response = await callTool<{ results?: unknown[] }>(searchTool, {
+        query: trimmed,
+      });
       const next = asRecords(response.results)
         .map((entry) => normalizeBookmark(entry.bookmark))
         .filter((bookmark) => Boolean(urlOf(bookmark)));
@@ -364,19 +384,28 @@ export function BookmarksView({
       <header className="bookmarks-header">
         <div>
           <h1 id="bookmarks-title">Bookmarks</h1>
-          <p>Search, review, and enrich your private reading library.</p>
+          {/* A visitor is not reviewing or enriching anything, and telling them
+              the library is private while they are reading it is worse than
+              saying nothing. */}
+          <p>
+            {owner
+              ? "Search, review, and enrich your private reading library."
+              : "What I am reading, and what I took from it."}
+          </p>
         </div>
-        <button
-          type="button"
-          className="bookmark-primary"
-          aria-expanded={createOpen}
-          onClick={() => {
-            clearMessages();
-            setCreateOpen((current) => !current);
-          }}
-        >
-          {createOpen ? "Cancel" : "Add bookmark"}
-        </button>
+        {owner && (
+          <button
+            type="button"
+            className="bookmark-primary"
+            aria-expanded={createOpen}
+            onClick={() => {
+              clearMessages();
+              setCreateOpen((current) => !current);
+            }}
+          >
+            {createOpen ? "Cancel" : "Add bookmark"}
+          </button>
+        )}
       </header>
 
       {createOpen && (

@@ -33,6 +33,15 @@ import { EVENT_NAME_RE, pruneEvents, track } from "./track.ts";
 export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
   const SERVICE_NAME = config.worldview.instance;
 
+  const VIEW_PATHS = new Set([
+    "/",
+    "/declaration",
+    "/projects",
+    "/analytics",
+    "/learning",
+    "/bookmarks",
+  ]);
+
   return {
     async fetch(request, baseEnv, ctx) {
       const env: Env = { ...baseEnv, ...config };
@@ -59,8 +68,17 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
       });
     }
 
+    // `/bookmarks` is both a JSON API the static site calls and a view a person
+    // navigates to. A browser asks for text/html and fetch() does not, so the
+    // two can share the path — which beats renaming an endpoint that is already
+    // deployed and consumed, or giving the tab a word that is not its name.
+    const wantsHtml = (request.headers.get("accept") ?? "").includes(
+      "text/html",
+    );
+
     if (
       request.method === "GET" &&
+      !wantsHtml &&
       (url.pathname === "/bookmarks" ||
         url.pathname === "/bookmarks/search" ||
         url.pathname === "/bookmarks/facets" ||
@@ -217,7 +235,11 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
     // the same bundle; the server decides what it may show them, and the app
     // builds its nav from the tools it is actually allowed to call. One
     // codebase, one boundary, no second frontend to keep in sync.
-    if (request.method === "GET" && url.pathname === "/") {
+    //
+    // Every view path serves the same bundle so a tab can have a real URL that
+    // survives a refresh. Listed rather than a catch-all, so an actual typo is
+    // still a 404 instead of a page that renders and then does nothing.
+    if (request.method === "GET" && VIEW_PATHS.has(url.pathname)) {
       return new Response(appHtml(env, null, true), {
         headers: {
           "content-type": "text/html; charset=utf-8",
