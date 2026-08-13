@@ -28,7 +28,7 @@ export default createWorldview({
   // has somewhere to render. An instance that wants none of this omits all three
   // keys and gets declaration, projects, learning, and the two scores.
   publicWriting: {
-    siteOrigin: "https://example.com",
+    siteOrigin: "https://vibegui.com",
     manifestPath: "/content/manifest.json",
   },
   bookmarks: { publicRoutes: true },

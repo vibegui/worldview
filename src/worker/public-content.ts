@@ -36,11 +36,15 @@ export async function getDeclaration(env: Env) {
 }
 
 export async function listPublicWriting(env: Env): Promise<PublicWriting[]> {
+  // The module config wins over the wrangler var. Both existed, only the var was
+  // read, so an instance could configure a site origin and silently be ignored —
+  // which showed up as a 404 against whatever the var still pointed at.
   const siteOrigin = normalizedOrigin(
-    env.PUBLIC_SITE_ORIGIN,
+    env.publicWriting?.siteOrigin ?? env.PUBLIC_SITE_ORIGIN,
     "https://vibegui.com",
   );
-  const response = await fetch(`${siteOrigin}/content/manifest.json`, {
+  const manifestPath = env.publicWriting?.manifestPath ?? "/content/manifest.json";
+  const response = await fetch(`${siteOrigin}${manifestPath}`, {
     headers: { accept: "application/json" },
     cf: { cacheTtl: 300, cacheEverything: true },
   });

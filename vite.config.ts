@@ -27,7 +27,7 @@ function declarationScript(): string {
   // scoped by host and ignore the port, so signing in once on the worker origin
   // authenticates this one too.
   return `window.__STANDALONE__=true;window.__LOGIN_URL__=${JSON.stringify(
-    `${workerOrigin}/`,
+    `${workerOrigin}/login`,
   )};window.__WORLDVIEW__=${JSON.stringify({
     name: declaration.name,
     results: Object.fromEntries(

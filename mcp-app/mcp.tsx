@@ -58,7 +58,7 @@ async function rpc(method: string, params?: unknown): Promise<any> {
     }),
   });
   if (response.status === 401) {
-    const login = (window as { __LOGIN_URL__?: string }).__LOGIN_URL__ ?? "/";
+    const login = (window as { __LOGIN_URL__?: string }).__LOGIN_URL__ ?? "/login";
     window.location.assign(login);
     throw new Error("Session expired");
   }

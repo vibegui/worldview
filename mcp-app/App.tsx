@@ -32,6 +32,7 @@ type JsonRecord = Record<string, unknown>;
 // twice on the server, deciding the navigation too — rather than a second
 // public frontend that drifts from this one.
 const NAV_ITEMS = [
+  { label: "Writing", tool: "LIST_PUBLIC_WRITING" },
   { label: "Declaration", tool: "GET_DECLARATION" },
   { label: "Projects", tool: "GET_PORTFOLIO" },
   { label: "Analytics", tool: "SITES_OVERVIEW" },
@@ -153,6 +154,9 @@ function ResultView({
   }
   if (loading) return <Loading />;
   if (error) return <div className="error">{error}</div>;
+  if (toolName === "LIST_PUBLIC_WRITING" || Array.isArray(result.writing)) {
+    return <WritingView articles={asRecords(result.writing)} />;
+  }
   if (toolName === "SITES_OVERVIEW" || Array.isArray(result.sites)) {
     return <AnalyticsView result={result} callTool={callTool} />;
   }
@@ -222,6 +226,55 @@ function ResultView({
     return <Empty message="Choose a view to begin." />;
   }
   return <JsonFallback value={result} />;
+}
+
+/**
+ * The essays, newest first — the same list vibegui.com opens on.
+ *
+ * Titles link out to the site rather than rendering here: the article pages are
+ * prerendered there with their own metadata, and re-rendering them in a client
+ * app would trade real URLs for a worse copy.
+ */
+function WritingView({ articles }: { articles: JsonRecord[] }) {
+  if (!articles.length) {
+    return <Empty message="No published writing yet." />;
+  }
+  return (
+    <div className="writing-list">
+      {articles.map((article) => (
+        <article className="writing-item" key={text(article.slug)}>
+          <p className="writing-date">{longDate(article.date)}</p>
+          <h2>
+            <a href={text(article.url)} target="_blank" rel="noreferrer">
+              {text(article.title)}
+            </a>
+          </h2>
+          {text(article.description) && <p>{text(article.description)}</p>}
+          <a
+            className="writing-more"
+            href={text(article.url)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Read essay <span aria-hidden="true">→</span>
+          </a>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function longDate(value: unknown): string {
+  const raw = text(value);
+  if (!raw) return "";
+  const parsed = new Date(raw.length <= 10 ? `${raw}T12:00:00Z` : raw);
+  return Number.isNaN(parsed.valueOf())
+    ? raw
+    : parsed.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 }
 
 function PortfolioView({

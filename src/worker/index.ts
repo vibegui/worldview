@@ -17,6 +17,7 @@ import {
   hasSession,
   loginPage,
   readCookie,
+  sessionCookieHeader,
 } from "./session.ts";
 import { markBriefDue } from "./state.ts";
 import { EVENT_NAME_RE, pruneEvents, track } from "./track.ts";
@@ -247,7 +248,18 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
       // carries our cookie can be in that situation; a plain MCP client with no
       // token still gets the public tier.
       if (access === "public" && readCookie(request, COOKIE_NAME)) {
-        return json({ error: "session expired" }, 401);
+        // Clear the cookie that caused this. Without it the browser keeps
+        // presenting the same dead session, and since `/` now serves the app
+        // rather than the login form, the redirect has nothing to break the
+        // cycle — it just reloads and 401s again.
+        return new Response(JSON.stringify({ error: "session expired" }), {
+          status: 401,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store",
+            "set-cookie": sessionCookieHeader("", url, 0),
+          },
+        });
       }
       return handleMcpRequest(request, env, access);
     }
