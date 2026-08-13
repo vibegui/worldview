@@ -32,7 +32,9 @@
     "bookmarks:import:remote": "bun scripts/import-bookmarks.ts --remote",
     "deploy": "bun run build && wrangler deploy",
     "deploy:dry": "bun run build && wrangler deploy --dry-run",
-    "prepare": "bun run build"
+    "prepare": "bun run build",
+    "dev:ui": "vite",
+    "dev:all": "bun run dev & bun run dev:ui"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.4",

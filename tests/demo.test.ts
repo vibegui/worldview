@@ -241,3 +241,25 @@ describe("project markdown", () => {
     expect(parseProjects(["# Just notes\n\nno frontmatter here"])).toEqual([]);
   });
 });
+
+describe("project prose", () => {
+  test("a wrapped list item stays one criterion", () => {
+    // Splitting on newlines turns one commitment into two, and the second half
+    // reads as its own half-sentence promise.
+    const [project] = parseProjects([
+      `---\nid: x\n---\n\n## Success criteria\n\n1. One thing that wraps\n   onto a second line.\n2. Another.\n`,
+    ]);
+    expect(project?.successCriteria).toEqual([
+      "One thing that wraps onto a second line.",
+      "Another.",
+    ]);
+  });
+
+  test("the outcome is the first paragraph, not the whole argument", () => {
+    const [project] = parseProjects([
+      `---\nid: x\n---\n\n## Declared outcome\n\nThe outcome.\n\nWhy it matters, at length.\n\n## Success criteria\n\n- a\n`,
+    ]);
+    expect(project?.outcome).toBe("The outcome.");
+    expect(project?.outcomeDetail).toContain("Why it matters");
+  });
+});

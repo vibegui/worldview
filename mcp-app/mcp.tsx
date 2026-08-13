@@ -59,8 +59,12 @@ async function callToolOverHttp(
   });
 
   if (response.status === 401) {
-    // The session expired. Reloading lands on the login form.
-    window.location.assign("/");
+    // The session expired. In production `/` is the login form; under the dev
+    // server vite owns `/`, so the worker origin is passed in — otherwise this
+    // bounces between two pages that both say nothing.
+    const login =
+      (window as { __LOGIN_URL__?: string }).__LOGIN_URL__ ?? "/";
+    window.location.assign(login);
     throw new Error("Session expired");
   }
   if (!response.ok) {

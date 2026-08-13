@@ -25,8 +25,10 @@ export interface DeclaredProject {
   serves: string[];
   /** One line: why this exists at all. */
   spirit: string;
-  /** The `## Declared outcome` section: what being done looks like. */
+  /** First paragraph of `## Declared outcome`: what being done looks like. */
   outcome: string;
+  /** The whole section, reasoning included. */
+  outcomeDetail: string;
   /** The `## Success criteria` section, one entry per line. */
   successCriteria: string[];
   /** Prose, everything after the frontmatter. */
@@ -83,6 +85,43 @@ function section(body: string, heading: string): string {
   return body.match(pattern)?.[1]?.trim() ?? "";
 }
 
+function firstParagraph(section: string): string {
+  return (section.split(/\n\s*\n/)[0] ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * A markdown list, one entry per item rather than per line.
+ *
+ * Splitting on newlines looks right until a criterion wraps, and then one
+ * commitment silently becomes two — with the second half reading as its own
+ * half-sentence promise.
+ */
+function listItems(section: string): string[] {
+  const items: string[] = [];
+  for (const line of section.split("\n")) {
+    const marker = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/);
+    if (marker) {
+      items.push(marker[1]!.trim());
+    } else if (line.trim() && items.length) {
+      items[items.length - 1] += ` ${line.trim()}`;
+    }
+  }
+  const cleaned = items
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  // Written as prose rather than a list. Returning nothing would delete what the
+  // author wrote, and an empty criteria list reads as "none declared" — the
+  // opposite of what the section says.
+  if (!cleaned.length && section.trim()) {
+    return section
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+  }
+  return cleaned;
+}
+
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 export function parseProject(markdown: string): DeclaredProject | null {
@@ -109,11 +148,12 @@ export function parseProject(markdown: string): DeclaredProject | null {
     serves: many("serves"),
     // `**Spirit:** one line` is the convention in projects/README.md.
     spirit: body.match(/\*\*Spirit:\*\*\s*(.+)/)?.[1]?.trim() ?? "",
-    outcome: section(body, "Declared outcome").replace(/\s+/g, " ").trim(),
-    successCriteria: section(body, "Success criteria")
-      .split("\n")
-      .map((line) => line.replace(/^\s*(?:[-*]|\d+\.)\s*/, "").trim())
-      .filter(Boolean),
+    // The first paragraph is the outcome; the rest of the section is the
+    // argument for it. Real files run to twenty lines of reasoning, and a card
+    // that shows the whole thing shows nothing.
+    outcome: firstParagraph(section(body, "Declared outcome")),
+    outcomeDetail: section(body, "Declared outcome"),
+    successCriteria: listItems(section(body, "Success criteria")),
     body,
     initialLifecycle: one("lifecycle") || undefined,
     initialNextReview: one("next_review") || undefined,
