@@ -1,10 +1,13 @@
 # Worldview
 
-One MCP server that answers three questions: **what your life is about, what game you are playing, and whether you are playing it well.**
+One system that answers three questions: **what my life is about, what game I am playing, and whether I am playing it well.**
 
-It becomes a persistent personal agent when connected to deco studio — or to any software factory that speaks MCP.
+It is reachable two ways, and they are the same server:
 
-The code is public and copyable. Your projects, goals, memory, decisions, captures, briefs, credentials, and activity stay in your own Cloudflare D1 database and Worker secrets.
+- **In a browser** at `worldview.vibegui.com` — the declaration and both scores in public, everything else behind one password.
+- **As an MCP server** at `/mcp`, so deco Studio or any factory that speaks MCP becomes a persistent personal agent on top of it.
+
+Projects, goals, memory, decisions, captures, briefs, and activity live in one Cloudflare D1 database. This repo was extracted out of `vibegui.com/mcp`; the blog stayed behind, as [a project inside the worldview](./projects/blog.md) rather than the thing wrapped around it.
 
 ## What this is not
 
@@ -33,12 +36,14 @@ Anything else is diagnostic detail beneath one of the two.
 
 ```
 worldview.json        what should be — the declaration, in git
+projects/*.md         one project each: what it serves, its outcome, its criteria
+src/index.ts          the deployment: declaration + projects + modules, wired
 src/core/             pure logic shared by worker and tests
 src/worker/           the Worker: MCP server, tools, D1 state, auth
-mcp-app/              the MCP App UI, inlined to one HTML by vite
+mcp-app/              the UI, inlined to one HTML by vite, served two ways
 migrations/           D1 — measurement only, never declaration
 tests/                bun tests
-scripts/              corpus upload, bookmark import
+scripts/              corpus upload, bookmark import, local mirror of prod D1
 ```
 
 One Cloudflare Worker: D1 for state, R2 + AI Search for the writing corpus, an hourly cron for read-only GitHub evidence. The MCP App builds to `dist-mcp/index.html` and is imported as text by `src/worker/resources.ts`, so **`bun run build` must run before `dev`, `test`, or `deploy`.**
@@ -47,38 +52,33 @@ One Cloudflare Worker: D1 for state, R2 + AI Search for the writing corpus, an h
 
 The same `/mcp` endpoint has two modes:
 
-- **Public, without a token:** published writing tools only.
-- **Private, with `MCP_PRIVATE_TOKEN`:** public tools plus everything else and the MCP App.
+- **Public, without a credential:** the declaration, both scores, projects marked `public: true`, public bookmarks, and the published-writing tools.
+- **Private, with `WORLDVIEW_PASSWORD`:** everything.
 
-Private tools are omitted from `tools/list` and private resources from `resources/list` for unauthenticated clients, and the server re-checks on call — guessing a name does not bypass it.
+Private tools are omitted from `tools/list` and private resources from `resources/list` for unauthenticated clients, and the server re-checks on call — guessing a name does not bypass it. The browser and MCP share one credential: a bearer token for a client, the same string typed into `/login` for a person, which returns an HMAC-signed cookie. Rotating the password invalidates every session for free. `MCP_PRIVATE_TOKEN` is still accepted under its old name.
 
-A bearer token proves possession, not Studio identity. Store it only in the private Studio connection. A later version can replace it with Studio-issued OAuth/JWT.
+A bearer token proves possession, not identity. Store it only in the private Studio connection.
 
 ## Run locally
 
 ```bash
 bun install
 cp .dev.vars.example .dev.vars   # then fill it in
-bun run db:local
+bun run db:pull                  # schema from migrations, data from production
 bun run build
 bun run dev
 ```
 
-MCP URL: `http://localhost:8787/mcp` (wrangler picks the next free port if that one is taken — check its output).
+Open `http://localhost:8787`, sign in with `WORLDVIEW_PASSWORD`. MCP is at `/mcp` on the same origin (wrangler picks the next free port if 8787 is taken — check its output).
 
-Private connection:
+`bun run dev:ui` adds a hot-reloading UI on `:5173` that proxies everything with a consequence to the worker. See [`AGENTS.md`](./AGENTS.md).
 
-```text
-URL:           http://localhost:8787/mcp
-Authorization: Bearer <MCP_PRIVATE_TOKEN>
-```
-
-Never commit `.dev.vars`.
+`db:pull` is one-way and leaves `.snapshot.sql`, which holds real personal data and is gitignored. Never commit it, or `.dev.vars`.
 
 ## Private tools
 
 - `GET_DECLARATION`, `SET_STRATEGIC_RESULT_PROGRESS`, `UPDATE_SCORECARD_ITEM`
-- `GET_PORTFOLIO`, `SAVE_PROJECT`, `GET_PROJECT`, `SET_PROJECT_PROGRESS`
+- `GET_PORTFOLIO`, `GET_PROJECT`, `SET_PROJECT_STATE`, `SET_PROJECT_PROGRESS`
 - `GET_ATTENTION_MAP`, `GET_STALE_PROJECTS`, `REFRESH_GITHUB`
 - `LIST_GOALS`, `CREATE_GOAL`, `UPDATE_GOAL`, `COMPLETE_GOAL`
 - `RECALL_MEMORY`, `REMEMBER`, `SUPERSEDE_MEMORY`, `FORGET_MEMORY`
@@ -86,7 +86,7 @@ Never commit `.dev.vars`.
 - `CAPTURE`, `GET_INBOX`
 - `GET_DAILY_BRIEF_INPUT`, `SAVE_DAILY_BRIEF`, `GET_DAILY_BRIEF`
 - `SITES_OVERVIEW`, `SITE_METRICS`
-- bookmarks: `LIST_ALL_BOOKMARKS`, `SEARCH_ALL_BOOKMARKS`, `CREATE_BOOKMARK`, `UPDATE_BOOKMARK`, `DELETE_BOOKMARK`, `IMPORT_BOOKMARKS`, `ENRICH_BOOKMARK`
+- bookmarks: `SAVE_BOOKMARK` (a URL is the whole argument — the page's own `<head>` supplies the rest), `LIST_ALL_BOOKMARKS`, `SEARCH_ALL_BOOKMARKS`, `GET_BOOKMARK_ADMIN`, `CREATE_BOOKMARK`, `UPDATE_BOOKMARK`, `DELETE_BOOKMARK`, `IMPORT_BOOKMARKS`, `ENRICH_BOOKMARK`
 - `GET_STATUS`, `GET_CORPUS_STATUS`
 
 The hourly cron refreshes read-only GitHub evidence when `GITHUB_TOKEN` exists and marks the daily brief as due.
@@ -108,25 +108,11 @@ bun run deploy:dry   # build + validate without shipping
 bun run deploy
 ```
 
-Secrets are set with `wrangler secret put MCP_PRIVATE_TOKEN` and `wrangler secret put GITHUB_TOKEN`; migrations with `bun run db:remote`.
+Secrets are set with `wrangler secret put WORLDVIEW_PASSWORD` and `wrangler secret put GITHUB_TOKEN`; migrations with `bun run db:remote`.
 
-> **This repo deploys over an existing Worker.** The Worker name, D1 `database_id`, R2 bucket, and AI Search instance in `wrangler.jsonc` are deliberately unchanged from before this project was extracted out of `vibegui.com/mcp`, so it is a drop-in replacement for a deployment holding real data. Renaming any of them is a migration, not a rename.
+> **This is a new Worker bound to existing data.** `worldview` deploys to `worldview.vibegui.com` and binds the D1, R2, and AI Search resources the old `vibegui-personal-ai-os` already owned. Nothing is renamed and nothing is copied. That Worker keeps serving `mcp.vibegui.com` until the Studio connection is repointed, so rollback is "stop deploying this one". Renaming any of those resources is a migration with a data-movement plan, never a cleanup.
 
-## Copy for yourself
-
-Intentionally one deployment per person:
-
-1. Fork the repository.
-2. **Write your own `worldview.json`.** This is the actual work — the rest is plumbing. A declaration is a place to stand, not a prediction; it does not have to be true when you write it.
-3. Change the Worker name and the D1/R2 names in `wrangler.jsonc`, remove the `database_id`, and create your own with `wrangler d1 create`.
-4. Point the public writing adapter at your own site, or delete the public tools.
-5. `bun run db:remote`, set `MCP_PRIVATE_TOKEN` and `GITHUB_TOKEN`, deploy.
-6. Add the `/mcp` URL to a private Studio connection with the bearer token.
-7. Ask it for `GET_DECLARATION`, then `SAVE_PROJECT` for your first project.
-
-`GITHUB_TOKEN` is currently a classic PAT with `repo` scope so it can read repositories across accounts and orgs. The Worker only issues GET requests, but that scope is broader than ideal — GitHub App auth should replace it.
-
-The declaration, projects, goals, memory, and briefing core carry no hardcoded personal data beyond `worldview.json`. The public writing tools are an example module.
+`GITHUB_TOKEN` is a classic PAT with `repo` scope so it can read repositories across accounts and orgs. The Worker only issues GET requests, but that scope is broader than ideal — GitHub App auth should replace it.
 
 ## Attribution
 

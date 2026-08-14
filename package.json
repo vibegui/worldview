@@ -1,18 +1,9 @@
 {
   "name": "worldview",
   "version": "0.1.0",
-  "description": "What your life is about, what game you are playing, and whether you are playing it well \u2014 as an MCP app.",
+  "description": "What my life is about, what game I am playing, and whether I am playing it well.",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts",
-    "./migrations/*": "./migrations/*"
-  },
-  "files": [
-    "src",
-    "migrations",
-    "scripts",
-    "dist-mcp"
-  ],
+  "private": true,
   "scripts": {
     "dev": "wrangler dev",
     "dev:app": "vite build --watch",
@@ -22,10 +13,7 @@
     "types": "wrangler types",
     "db:local": "wrangler d1 migrations apply DB --local",
     "db:remote": "wrangler d1 migrations apply DB --remote",
-    "demo": "bun run demo:setup && bun run dev",
-    "demo:setup": "bun scripts/demo-setup.ts",
-    "demo:seed": "wrangler d1 execute DB --local --file=seeds/demo.sql",
-    "demo:reset": "rm -rf .wrangler/state && bun run db:local && bun run demo:seed",
+    "db:pull": "bun scripts/db-pull.ts",
     "corpus:upload": "bun scripts/upload-corpus.ts",
     "corpus:upload:remote": "bun scripts/upload-corpus.ts --remote",
     "bookmarks:import": "bun scripts/import-bookmarks.ts --local",
@@ -51,8 +39,5 @@
     "vite": "^8.1.4",
     "vite-plugin-singlefile": "^2.3.3",
     "wrangler": "^4.110.0"
-  },
-  "bin": {
-    "worldview-db-pull": "./scripts/db-pull.ts"
   }
 }

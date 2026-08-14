@@ -1,19 +1,29 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "worldview",
-  // This repo's own instance. The library entry point is src/index.ts.
-  "main": "src/standalone.ts",
+  "main": "src/index.ts",
   "compatibility_date": "2026-07-12",
   "compatibility_flags": ["nodejs_compat"],
+
+  // A new worker, deployed from this repo, bound to the *existing* resources.
+  // Nothing is renamed and nothing moves: `vibegui-personal-ai-os` keeps running
+  // on mcp.vibegui.com until the Studio connection is repointed, so rollback is
+  // "stop deploying this one" rather than a restore.
+  "routes": [
+    {
+      "pattern": "worldview.vibegui.com",
+      "custom_domain": true
+    }
+  ],
+
   "vars": {
-    "PUBLIC_SITE_ORIGIN": "https://example.com",
-    "PUBLIC_REPO_RAW_ORIGIN": "https://raw.githubusercontent.com/OWNER/REPO/main",
-    "GITHUB_USERNAME": "",
-    "AUTORAG_INSTANCE": "worldview-writing"
+    "PUBLIC_SITE_ORIGIN": "https://vibegui.com",
+    "PUBLIC_REPO_RAW_ORIGIN": "https://raw.githubusercontent.com/vibegui/vibegui.com/main",
+    "GITHUB_USERNAME": "vibegui",
+    "AUTORAG_INSTANCE": "vibegui-writing"
   },
-  // Project declarations are markdown, imported as text. The instance owns these
-  // files, so the rule lives in the instance's config — the library never
-  // reaches for them.
+
+  // Project declarations are markdown, imported as text by src/index.ts.
   "rules": [
     {
       "type": "Text",
@@ -21,44 +31,35 @@
       "fallthrough": true
     }
   ],
+
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "worldview",
-      // Local development and `bun run demo` ignore this and use .wrangler/state,
-      // but wrangler refuses to start without *some* value. Run
-      // `wrangler d1 create worldview` and paste the id it prints before you
-      // touch --remote or deploy.
-      "database_id": "replace-with-your-own-d1-id",
+      "database_name": "vibegui-personal-ai-os",
+      "database_id": "503776b2-1c54-481d-85a4-a99e8028c72d",
       "migrations_dir": "migrations"
     }
   ],
+
   "triggers": {
     "crons": ["0 * * * *"]
   },
+
   "r2_buckets": [
     {
       "binding": "CORPUS",
-      "bucket_name": "worldview-corpus"
+      "bucket_name": "vibegui-corpus"
     }
   ],
 
-  // The writing module. Both bindings are optional and this one is commented out
-  // on purpose: an AI Search instance must already exist in the account, and
-  // wrangler refuses to even start `dev` when it does not — so leaving it
-  // enabled would mean nobody can run this repo without provisioning first.
-  //
-  // Create the index, then uncomment. SEARCH_PUBLIC_WRITING falls back to
-  // lexical manifest search meanwhile, and GET_CORPUS_STATUS reports
-  // `configured: false`.
-  //
-  // "ai_search": [
-  //   {
-  //     "binding": "AUTORAG",
-  //     "instance_name": "worldview-writing",
-  //     "remote": true
-  //   }
-  // ],
+  "ai_search": [
+    {
+      "binding": "AUTORAG",
+      "instance_name": "vibegui-writing",
+      "remote": true
+    }
+  ],
+
   "observability": {
     "enabled": true
   }

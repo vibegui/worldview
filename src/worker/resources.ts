@@ -74,7 +74,6 @@ export function appHtml(
   // Names and titles only: the app calls GET_DECLARATION for the rest.
   const declaration = {
     name: env.worldview.name,
-    hero: env.hero ?? null,
     results: Object.fromEntries(
       env.worldview.strategicResults.map((result) => [result.id, result.title]),
     ),

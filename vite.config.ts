@@ -5,14 +5,7 @@ import { defineConfig, type Plugin } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { parseProjects } from "./src/core/projects.ts";
 
-/**
- * Which worldview the dev server is dressing.
- *
- * Defaults to this repo, so `bun run dev:ui` works with no setup. Point it at an
- * instance to iterate on a real declaration:
- *
- *   WORLDVIEW_DIR=~/…/vibegui.com/worldview bun run dev:ui
- */
+/** Where the declaration and projects live. This repo, unless told otherwise. */
 const instanceDir = path.resolve(
   process.env.WORLDVIEW_DIR ?? import.meta.dirname,
 );
@@ -39,10 +32,9 @@ function declarationScript(): string {
 }
 
 /**
- * Dev only. In production the worker injects this per request, because the
- * bundle is built once into the library and the declaration belongs to whichever
- * instance is serving it. In dev there is no worker in front of the page, so
- * vite stands in — reading the same file the worker would.
+ * Dev only. In production the worker injects this when it serves the built
+ * bundle; in dev there is no worker in front of the page, so vite stands in —
+ * reading the same file the worker would.
  */
 function worldviewDevServer(): Plugin {
   return {

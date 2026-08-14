@@ -106,7 +106,6 @@ button {
 }
 
 .content > *,
-.writing-list,
 .declaration,
 .project-list,
 .section-heading {
@@ -2451,67 +2450,6 @@ button.analytics-row:focus-visible .analytics-fill {
   visibility: hidden;
 }
 
-/* ---------- writing ---------- */
-/* A reading list, matching vibegui.com: date, serif title, standfirst, hairline. */
-.writing-list {
-  display: grid;
-}
-
-.writing-item {
-  padding: 34px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.writing-item:last-child {
-  border-bottom: 0;
-}
-
-.writing-date {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.025em;
-  line-height: 16px;
-}
-
-.writing-item h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 30px;
-  font-weight: 500;
-  letter-spacing: normal;
-  line-height: 1.15;
-}
-
-.writing-item h2 a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.writing-item h2 a:hover {
-  color: var(--accent);
-}
-
-.writing-item > p {
-  max-width: 65ch;
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 26px;
-}
-
-.writing-more {
-  display: inline-block;
-  margin-top: 16px;
-  color: var(--text);
-  font-size: 0.88rem;
-  text-decoration: none;
-}
-
-.writing-more:hover {
-  color: var(--accent);
-}
-
 .theme-toggle {
   padding: 4px 8px;
   border: 0;
@@ -2523,90 +2461,6 @@ button.analytics-row:focus-visible .analytics-fill {
 
 .theme-toggle:hover {
   color: var(--text);
-}
-
-/* ---------- hero ---------- */
-/* Measured off vibegui.com: a 600px copy column, a 40px gutter, and a 128px
-   avatar — 768 in total, which is why the copy is narrower than the article
-   column below it rather than the same width. */
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 600px) 128px;
-  gap: 40px;
-  align-items: start;
-  padding-bottom: 40px;
-  border-bottom: 1px solid var(--border);
-}
-
-.hero-eyebrow {
-  margin: 0 0 16px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.hero h1 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 48px;
-  font-weight: 500;
-  letter-spacing: normal;
-  line-height: 1.15;
-}
-
-.hero-intro {
-  margin: 20px 0 0;
-  color: var(--muted);
-  font-size: 18px;
-  line-height: 1.625;
-}
-
-.hero-intro a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.hero-intro a:hover {
-  color: var(--accent-hover);
-  text-decoration: underline;
-}
-
-.hero-links {
-  display: flex;
-  gap: 24px;
-  margin: 24px 0 0;
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.hero-links a {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.hero-links a:hover {
-  color: var(--accent);
-}
-
-.hero-avatar {
-  width: 128px;
-  height: 128px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-@media (max-width: 640px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hero h1 {
-    font-size: 36px;
-  }
-
-  .hero-avatar {
-    order: -1;
-  }
 }
 
 .language-switch {

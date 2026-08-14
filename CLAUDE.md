@@ -59,12 +59,14 @@ clean up the consequences.
 
 ```
 worldview.json        what should be — the declaration, in git
+projects/*.md         one project each: what it serves, its outcome, its criteria
+src/index.ts          the deployment: declaration + projects + modules, wired
 src/core/             pure logic shared by worker and tests (declaration loader)
 src/worker/           the Worker: MCP server, tools, D1 state, auth
 mcp-app/              the MCP App UI, inlined to one HTML by vite
 migrations/           D1 — measurement only, never declaration
 tests/                bun tests
-scripts/              corpus upload, bookmark import
+scripts/              corpus upload, bookmark import, local mirror of prod D1
 ```
 
 The MCP App builds to `dist-mcp/index.html` and is imported as text by
@@ -76,8 +78,12 @@ or missing bundle fails the import.
 
 The same `/mcp` endpoint serves two capability sets:
 
-- **Public, no token:** published writing tools only.
-- **Private, `MCP_PRIVATE_TOKEN`:** everything, plus the MCP App.
+- **Public, no token:** the declaration, public projects, public bookmarks, and
+  the published-writing tools. This is what worldview.vibegui.com shows a
+  stranger, and it is deliberate: the declaration and both scores are published.
+- **Private, `WORLDVIEW_PASSWORD`:** everything. The same credential is the
+  browser password and the MCP bearer token; `MCP_PRIVATE_TOKEN` is still
+  accepted so the older deployment keeps working.
 
 Private tools are omitted from `tools/list` for unauthenticated clients, and
 the server re-checks on call — guessing a name does not bypass it. When adding
@@ -86,25 +92,36 @@ a tool, set `access` deliberately and assume the public set is hostile input.
 A bearer token proves possession, not identity. Store it only in the private
 Studio connection.
 
-## This repo is the library, not an instance
+## This repo is the deployment, not a library
 
-Worldview is the generic tool. A person's declaration, content, bindings, and
-secrets live in *their* repo, which consumes this one. The first instance is
-`vibegui.com/worldview/`.
+There is one Worldview and it is the owner's. It is not a template, not a
+package, and not something another repo consumes — so no factory, no config
+shape designed for a caller who does not exist, no `if` for a second instance.
+When a fork matters it will be a fork, and that is a later problem with its own
+diff.
 
-That means this repo owns its own throwaway Cloudflare resources — worker
-`worldview`, D1 `worldview`, no `database_id` committed — so it can be deployed
-and demoed freely. **The instance's live infrastructure is a different thing and
-is off limits:** worker `vibegui-personal-ai-os`, D1
+This code started life as `vibegui.com/mcp` and was extracted here. **The blog
+did not come with it.** vibegui.com stays a Pages deployment that renders its own
+articles; Worldview reads its published manifest so an agent knows what has
+already been said, and links to it. Serving article HTML from this worker would
+make it a blog engine, which is the one thing it was decided not to be. The blog
+is a project *inside* the worldview — `projects/blog.md` — not the shell around
+it.
+
+### Live resources
+
+This worker binds the resources the old one already owned: D1
 `503776b2-1c54-481d-85a4-a99e8028c72d`, R2 `vibegui-corpus`, AI Search
-`vibegui-writing`, the custom domain `mcp.vibegui.com`, and the `ui://vibegui/*`
-resource URIs pinned by a Studio connection. Renaming any of those is a
-migration with a data-movement plan, never a cleanup. Do not confuse the two —
-until recently both repos claimed the same database.
+`vibegui-writing`. Nothing is renamed and nothing is copied — the data stays
+where it is and a second worker binds to it. `vibegui-personal-ai-os` on
+`mcp.vibegui.com` keeps running until the Studio connection is repointed, so
+rollback is "stop deploying this one".
 
-Resource URIs derive from the declaration's `instance` slug, so an instance that
-declares `"instance": "vibegui"` reproduces its pinned `ui://vibegui/*` exactly.
-Changing how they are derived breaks live views.
+Renaming or deleting any of those is a migration with a data-movement plan,
+never a cleanup. The same goes for the `ui://vibegui/*` resource URIs pinned by
+the Studio connection: they derive from the declaration's `instance` slug, so
+`"instance": "vibegui"` reproduces them exactly. Changing how they are derived
+breaks live views.
 
 ## Rules
 
@@ -113,10 +130,10 @@ Changing how they are derived breaks live views.
 - **Migrations are additive.** D1 has no down-migrations here. Remap and keep
   history rather than dropping rows; the eleven old scorecard items are the
   precedent. Wrangler tracks migrations by **filename, not content**, so editing
-  an already-applied body is a no-op for instances that ran it — that is how the
-  owner's seed data was removed from `0003`/`0004` without touching live rows.
-  Never add a migration that deletes declaration or progress data; it would run
-  against real databases.
+  an already-applied body is a no-op for a database that ran it — that is how the
+  seed data was removed from `0003`/`0004` without touching live rows.
+  Never add a migration that deletes declaration or progress data. `db:remote`
+  runs against the real database, which holds years of it.
 - **GitHub is read-only.** Never claim to have changed an external project.
 - **Persist only durable information.** Routine conversation is not memory.
 - **Project lifecycle is explicit:** draft, active, archived. Do not invent

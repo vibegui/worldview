@@ -22,25 +22,12 @@ export interface WorldviewConfig extends WorldviewInput {
    */
   site?: { title?: string; description?: string; favicon?: string };
   /**
-   * The masthead on the public Writing view: who this is, in their own words.
-   *
-   * Structured rather than free-form, because it is the one block every visitor
-   * reads first and it has to survive being rendered by a library that has never
-   * seen this instance. `intro` takes inline markdown links.
-   */
-  hero?: {
-    /** Small line above the title, e.g. "Ada Lovelace · London". */
-    eyebrow?: string;
-    title: string;
-    /** A paragraph. `[text](href)` is supported; nothing else is. */
-    intro?: string;
-    links?: Array<{ label: string; href: string }>;
-    /** Square image, rendered as a circle. */
-    avatar?: string;
-  };
-  /**
    * Published writing as prior art: "have I already said this?". Omit and the
    * three public writing tools do not exist.
+   *
+   * Reading only. The blog is a Pages deployment that owns its own rendering;
+   * this is how an agent searches what has already been said, not a second
+   * frontend for it.
    */
   publicWriting?: {
     siteOrigin: string;

@@ -7,7 +7,6 @@ const globals = (typeof window !== "undefined" ? window : {}) as {
   __WORLDVIEW__?: {
     name?: string;
     results?: Record<string, string>;
-    hero?: Hero | null;
   };
 };
 
@@ -25,14 +24,6 @@ const resultTitles: Record<string, string> = declaration.results ?? {};
 
 type JsonRecord = Record<string, unknown>;
 
-interface Hero {
-  eyebrow?: string;
-  title: string;
-  intro?: string;
-  links?: Array<{ label: string; href: string }>;
-  avatar?: string;
-}
-
 // The loop, in order: declare a future, run the projects that pursue it, see how
 // they are performing, keep what you learned, and accumulate what you learned
 // from. Goals and Inbox are gone as destinations — a goal belongs to the project
@@ -44,11 +35,10 @@ interface Hero {
 // twice on the server, deciding the navigation too — rather than a second
 // public frontend that drifts from this one.
 const NAV_ITEMS = [
-  { label: { en: "Writing", "pt-BR": "Textos" }, tool: "LIST_PUBLIC_WRITING", path: "/" },
   {
     label: { en: "Declaration", "pt-BR": "Declaração" },
     tool: "GET_DECLARATION",
-    path: "/declaration",
+    path: "/",
   },
   {
     label: { en: "Projects", "pt-BR": "Projetos" },
@@ -127,7 +117,7 @@ export function App() {
     }
     if (next !== locale) setLocale(next);
     document.documentElement.lang = next;
-    void callTool(tool, tool === "LIST_PUBLIC_WRITING" ? { locale: next } : {});
+    void callTool(tool, {});
   };
 
   useEffect(() => {
@@ -141,7 +131,7 @@ export function App() {
       : undefined;
     const boot = bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION";
     if (STANDALONE) document.documentElement.lang = locale;
-    void callTool(boot, boot === "LIST_PUBLIC_WRITING" ? { locale } : {});
+    void callTool(boot, {});
   }, [callTool, connected, nav, toolName]);
 
   // Back and forward move between tabs rather than out of the app.
@@ -152,12 +142,7 @@ export function App() {
       const next = localeFromPath(here);
       const item = nav.find((entry) => pathFor(entry.path, next) === here);
       setLocale(next);
-      if (item) {
-        void callTool(
-          item.tool,
-          item.tool === "LIST_PUBLIC_WRITING" ? { locale: next } : {},
-        );
-      }
+      if (item) void callTool(item.tool, {});
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -196,7 +181,7 @@ export function App() {
             onSwitch={(next) => {
               const current =
                 nav.find((item) => item.tool === toolName) ?? nav[0];
-              open(current?.tool ?? "LIST_PUBLIC_WRITING", current?.path, next);
+              open(current?.tool ?? "GET_DECLARATION", current?.path, next);
             }}
           />
         )}
@@ -327,14 +312,6 @@ function ResultView({
   }
   if (loading) return <Loading />;
   if (error) return <div className="error">{error}</div>;
-  if (toolName === "LIST_PUBLIC_WRITING" || Array.isArray(result.writing)) {
-    return (
-      <WritingView
-        articles={asRecords(result.writing)}
-        hero={declaration.hero ?? null}
-      />
-    );
-  }
   if (toolName === "SITES_OVERVIEW" || Array.isArray(result.sites)) {
     return <AnalyticsView result={result} callTool={callTool} />;
   }
@@ -404,111 +381,6 @@ function ResultView({
     return <Empty message="Choose a view to begin." />;
   }
   return <JsonFallback value={result} />;
-}
-
-/**
- * The essays, newest first — the same list vibegui.com opens on.
- *
- * Titles link out to the site rather than rendering here: the article pages are
- * prerendered there with their own metadata, and re-rendering them in a client
- * app would trade real URLs for a worse copy.
- */
-function WritingView({
-  articles,
-  hero,
-}: {
-  articles: JsonRecord[];
-  hero: Hero | null;
-}) {
-  if (!articles.length && !hero) {
-    return <Empty message="No published writing yet." />;
-  }
-  return (
-    <>
-      {hero && <HeroBlock hero={hero} />}
-      <div className="writing-list">
-      {articles.map((article) => (
-        <article className="writing-item" key={text(article.slug)}>
-          <p className="writing-date">{longDate(article.date)}</p>
-          <h2>
-            <a href={text(article.url)} target="_blank" rel="noreferrer">
-              {text(article.title)}
-            </a>
-          </h2>
-          {text(article.description) && <p>{text(article.description)}</p>}
-          <a
-            className="writing-more"
-            href={text(article.url)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Read essay <span aria-hidden="true">→</span>
-          </a>
-        </article>
-      ))}
-      </div>
-    </>
-  );
-}
-
-/**
- * The masthead: who this is, before anything they made.
- *
- * Every field is optional except the title, because an instance is a person and
- * not all of them have a photo or a second link.
- */
-function HeroBlock({ hero }: { hero: Hero }) {
-  return (
-    <header className="hero">
-      <div className="hero-copy">
-        {hero.eyebrow && <p className="hero-eyebrow">{hero.eyebrow}</p>}
-        <h1>{hero.title}</h1>
-        {hero.intro && <p className="hero-intro">{inlineLinks(hero.intro)}</p>}
-        {hero.links && hero.links.length > 0 && (
-          <p className="hero-links">
-            {hero.links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {link.label}
-              </a>
-            ))}
-          </p>
-        )}
-      </div>
-      {hero.avatar && <img className="hero-avatar" src={hero.avatar} alt="" />}
-    </header>
-  );
-}
-
-/**
- * `[text](href)` and nothing else.
- *
- * The intro needs one link — "co-founder of deco" — and a markdown renderer for
- * that is a dependency and an injection surface. Anything not matching stays
- * literal text, so an unclosed bracket renders as an unclosed bracket rather
- * than eating the rest of the sentence.
- */
-function inlineLinks(source: string) {
-  const parts: ReactNode[] = [];
-  const pattern = /\[([^\]]+)\]\(([^)\s]+)\)/g;
-  let last = 0;
-  let match = pattern.exec(source);
-  while (match) {
-    if (match.index > last) parts.push(source.slice(last, match.index));
-    parts.push(
-      <a key={`${match.index}`} href={match[2]} target="_blank" rel="noreferrer">
-        {match[1]}
-      </a>,
-    );
-    last = match.index + match[0].length;
-    match = pattern.exec(source);
-  }
-  if (last < source.length) parts.push(source.slice(last));
-  return parts;
 }
 
 function longDate(value: unknown): string {

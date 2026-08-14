@@ -1,55 +1,57 @@
 /**
- * Worldview, as a library.
+ * The deployment: one person's Worldview, served at worldview.vibegui.com.
  *
- * An instance is configuration and content: its declaration, its bindings, its
- * secrets, and the handful of lines below. All behaviour — the MCP server, the
- * tools, the D1 schema, the browser UI, the capability boundary — lives here and
- * is upgraded by bumping this dependency.
+ * Everything above this line is configuration and content — the declaration in
+ * `worldview.json`, the projects in `projects/*.md`, the bindings in
+ * `wrangler.jsonc`. Everything below it is behaviour, in `src/worker/`.
  *
- *     import { createWorldview } from "worldview";
- *     import declaredFuture from "../declared-future.md";
- *     import declaration from "../worldview.json" with { type: "json" };
- *
- *     export default createWorldview({ declaration, declaredFuture });
- *
- * Migrations ship in this package under `migrations/`. An instance copies them
- * into its own repo (`bun run schema:sync`) so the schema it is about to apply
- * shows up in its own diff — for a system whose thesis is that consequential
- * change should be reviewable, applying invisible schema is the wrong default.
+ * This is deliberately not a library with an instance somewhere else. There is
+ * one instance, it lives here, and a factory for a single caller is a layer that
+ * only ever costs a hop.
  */
 
 import { parseProjects } from "./core/projects.ts";
 import { resolveWorldview } from "./core/worldview.ts";
-import type { Env, WorldviewConfig } from "./worker/env.ts";
+import declaration from "../worldview.json" with { type: "json" };
 import { createWorker } from "./worker/index.ts";
 
-export function createWorldview(
-  config: WorldviewConfig,
-): ExportedHandler<Env> {
-  const worldview = resolveWorldview(config);
+// One import per project: there is no glob import in a Worker, and a build step
+// that generated this would put a pipeline back into what should be config.
+import atlas from "../projects/atlas.md";
+import blog from "../projects/blog.md";
+import files from "../projects/files.md";
+import library from "../projects/library.md";
+import newsletter from "../projects/newsletter.md";
+import worldviewOs from "../projects/worldview-os.md";
 
-  // Note what is *not* here: a throw when the declaration is malformed. This
-  // runs at module scope in a Worker, so throwing would 500 every route rather
-  // than the one view that depends on the bad field. Instances call
-  // `worldviewErrors()` from `check` and `test`, where loud is free.
-  return createWorker({
-    worldview,
-    projects: parseProjects(config.projects),
-    hero: config.hero,
-    site: config.site,
-    publicWriting: config.publicWriting,
-    bookmarks: config.bookmarks,
-    analytics: config.analytics,
-  });
-}
+// Note what is *not* here: a throw when the declaration is malformed. This runs
+// at module scope in a Worker, so throwing would 500 every route rather than the
+// one view that depends on the bad field. `worldviewErrors()` runs in `test`,
+// where loud is free.
+export default createWorker({
+  worldview: resolveWorldview({ declaration }),
+  projects: parseProjects([worldviewOs, blog, atlas, library, newsletter, files]),
 
-export { worldviewErrors, resolveWorldview } from "./core/worldview.ts";
-export { parseProject, parseProjects, projectErrors } from "./core/projects.ts";
-export type { DeclaredProject } from "./core/projects.ts";
-export type {
-  Worldview,
-  WorldviewDeclaration,
-  WorldviewMetric,
-  WorldviewStrategicResult,
-} from "./core/worldview.ts";
-export type { Env, WorldviewConfig } from "./worker/env.ts";
+  site: {
+    title: "Worldview",
+    description:
+      "What my life is about, what game I am playing, and whether I am playing it well.",
+  },
+
+  // Reading the blog, not being it. vibegui.com is a Pages deployment that owns
+  // its own rendering; these three tools let an agent search what has already
+  // been published before writing something that repeats it.
+  publicWriting: {
+    siteOrigin: "https://vibegui.com",
+    manifestPath: "/content/manifest.json",
+    repoRawOrigin: "https://raw.githubusercontent.com/vibegui/vibegui.com/main",
+  },
+
+  // `publicRoutes` serves `/bookmarks*` as a CORS JSON API — the blog's library
+  // page reads it, so turning it off breaks a page that is already deployed.
+  bookmarks: { publicRoutes: true },
+
+  analytics: {
+    sites: ["vibegui.com", "poesiadairene.com", "buscamalvados.com"],
+  },
+});

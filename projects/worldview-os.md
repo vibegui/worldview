@@ -1,7 +1,7 @@
 ---
 id: worldview-os
 name: Worldview OS
-repo: example/worldview
+repo: vibegui/worldview
 lifecycle: active
 public: true
 serves: [agency, multiplication]
@@ -11,9 +11,11 @@ serves: [agency, multiplication]
 
 ## Declared outcome
 
-One person who is not me runs their own deployment.
+Every project I care about is declared, scored, and reachable from one place —
+worldview.vibegui.com — and nothing else claims to be that place.
 
 ## Success criteria
 
-1. A stranger reaches a useful first brief from the documentation alone.
-2. It runs standalone in a browser, so it can be evaluated without an MCP host.
+1. It runs standalone in a browser, so it is usable without an MCP host.
+2. `vibegui.com/mcp` is gone; this repo is the only thing serving the MCP.
+3. The two scores are honest enough that I act on them.
