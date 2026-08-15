@@ -4,7 +4,7 @@ name: VibeGui
 repo: vibegui/vibegui.com
 lifecycle: active
 next_review: 2026-07-19
-serves: [agency, expression]
+serves: [expression, agency, understanding]
 ---
 
 **Spirit:** My Personal AI OS and the concepts I wish I knew when starting out

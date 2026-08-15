@@ -4,7 +4,7 @@ name: deco Studio
 repo: decocms/studio
 lifecycle: active
 next_review: 2026-07-26
-serves: [multiplication]
+serves: [autonomy, multiplication]
 ---
 
 **Spirit:** The tool I wish I had when I was starting out

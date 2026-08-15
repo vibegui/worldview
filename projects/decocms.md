@@ -3,7 +3,7 @@ id: decocms
 name: decoCMS
 lifecycle: active
 next_review: 2026-07-19
-serves: []
+serves: [autonomy]
 ---
 
 **Spirit:** My main daily energy and commitment

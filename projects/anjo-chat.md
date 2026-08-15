@@ -4,7 +4,7 @@ name: anjo.chat
 repo: vibegui/anjo.chat
 lifecycle: draft
 next_review: 2026-08-02
-serves: [understanding, multiplication]
+serves: [brasil, multiplication]
 ---
 
 **Spirit:** The advice I wanted when starting my company

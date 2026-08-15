@@ -4,7 +4,7 @@ name: mangabeira.chat
 repo: deco-cx/mangabeira
 lifecycle: active
 next_review: 2026-07-26
-serves: [understanding, expression]
+serves: [brasil, understanding]
 ---
 
 **Spirit:** Powerful ideas made accessible through conversation
