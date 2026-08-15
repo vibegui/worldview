@@ -109,6 +109,13 @@ run([
   ...tables.flatMap((table) => ["--table", table]),
 ]);
 
+// `INSERT` -> `INSERT OR REPLACE`, because step 1 is no longer an empty schema:
+// migration 0007 seeds the two scores, and the export carries them too, so a
+// plain insert dies on `UNIQUE constraint failed: scorecard_items.id`. Where the
+// two disagree production wins — that is the whole point of pulling.
+const dump = await Bun.file(snapshot).text();
+await Bun.write(snapshot, dump.replace(/^INSERT INTO /gm, "INSERT OR REPLACE INTO "));
+
 const size = Bun.file(snapshot).size;
 console.log(`\n3/4 load ${(size / 1024 / 1024).toFixed(1)}MB locally`);
 run(["d1", "execute", database, "--local", "--file", snapshot, "-y"]);
