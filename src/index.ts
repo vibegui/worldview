@@ -17,12 +17,13 @@ import { createWorker } from "./worker/index.ts";
 
 // One import per project: there is no glob import in a Worker, and a build step
 // that generated this would put a pipeline back into what should be config.
-import atlas from "../projects/atlas.md";
-import blog from "../projects/blog.md";
-import files from "../projects/files.md";
-import library from "../projects/library.md";
-import newsletter from "../projects/newsletter.md";
-import worldviewOs from "../projects/worldview-os.md";
+import anjoChat from "../projects/anjo-chat.md";
+import decoStudio from "../projects/deco-studio.md";
+import decocms from "../projects/decocms.md";
+import mangabeiraChat from "../projects/mangabeira-chat.md";
+import personalCrm from "../projects/personal-crm.md";
+import personalFiles from "../projects/personal-files.md";
+import vibegui from "../projects/vibegui.md";
 
 // Note what is *not* here: a throw when the declaration is malformed. This runs
 // at module scope in a Worker, so throwing would 500 every route rather than the
@@ -30,7 +31,15 @@ import worldviewOs from "../projects/worldview-os.md";
 // where loud is free.
 export default createWorker({
   worldview: resolveWorldview({ declaration }),
-  projects: parseProjects([worldviewOs, blog, atlas, library, newsletter, files]),
+  projects: parseProjects([
+    vibegui,
+    decoStudio,
+    decocms,
+    mangabeiraChat,
+    personalCrm,
+    personalFiles,
+    anjoChat,
+  ]),
 
   site: {
     title: "Worldview",
