@@ -110,6 +110,31 @@ export async function getDeclarationDashboard(
     }
   }
 
+  // The work pointed at each result, named rather than counted. A count says a
+  // result is being pursued; the names say by what, which is the part worth
+  // reading next to it.
+  const workByResult = new Map<
+    string,
+    Array<{ id: string; name: string; repo: string | null; lifecycle: string }>
+  >();
+  for (const project of env.projects) {
+    const lifecycle = String(
+      lifecycleById.get(project.id) ?? project.initialLifecycle ?? "draft",
+    );
+    if (lifecycle === "archived") continue;
+    for (const result of project.serves) {
+      workByResult.set(result, [
+        ...(workByResult.get(result) ?? []),
+        {
+          id: project.id,
+          name: project.name,
+          repo: project.repo ?? null,
+          lifecycle,
+        },
+      ]);
+    }
+  }
+
   const progressById = new Map(
     progressRows.results.map((row) => [String(row.id), row]),
   );
@@ -148,6 +173,7 @@ export async function getDeclarationDashboard(
         // How much active work is actually pointed at this result. Zero here on
         // a result with progress is the interesting disagreement.
         active_project_count: projectsByResult.get(result.id) ?? 0,
+        projects: workByResult.get(result.id) ?? [],
       };
     });
 

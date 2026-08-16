@@ -50,6 +50,15 @@ const NAV_ITEMS = [
     path: "/projects",
   },
   {
+    // Same tool as the declaration, different destination: the scoreboard is
+    // the half of that payload people come back to, and burying it under a
+    // manifesto they have already read makes them scroll past their own words
+    // to reach a number.
+    label: { en: "Scoreboard", "pt-BR": "Placar" },
+    tool: "GET_DECLARATION",
+    path: "/placar",
+  },
+  {
     label: { en: "Analytics", "pt-BR": "Analytics" },
     tool: "SITES_OVERVIEW",
     path: "/analytics",
@@ -59,13 +68,10 @@ const NAV_ITEMS = [
     tool: "RECALL_MEMORY",
     path: "/learning",
   },
-  {
-    label: { en: "Bookmarks", "pt-BR": "Favoritos" },
-    tool: "LIST_ALL_BOOKMARKS",
-    publicTool: "LIST_BOOKMARKS",
-    path: "/bookmarks",
-  },
 ] as const;
+
+/** Off-site, so it is a link and not a tab. */
+const BLOG_HREF = "https://vibegui.com";
 
 type Locale = "en" | "pt-BR";
 
@@ -160,6 +166,10 @@ const UI = {
     en: "Set an honest assessment",
   },
   notMeasured: { "pt-BR": "Ainda não medido", en: "Not yet measured" },
+  noProject: {
+    "pt-BR": "Nenhum projeto persegue este resultado",
+    en: "No project is pursuing this result",
+  },
 } as const;
 
 function ui(key: keyof typeof UI): string {
@@ -183,28 +193,32 @@ export function App() {
   } = useMcp();
   const initialized = useRef(false);
   const bookmarksActive = isBookmarkTool(toolName);
+  // Which tab is lit. Kept in state rather than read from `window` at render,
+  // because pushState does not re-render anything on its own.
+  const [here, setHere] = useState(() =>
+    STANDALONE ? window.location.pathname : "/",
+  );
   const [locale, setLocale] = useState<Locale>(() =>
     STANDALONE ? localeFromPath(window.location.pathname) : "en",
   );
 
   // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
-  const nav = STANDALONE
-    ? NAV_ITEMS.map((item) => ({
-        ...item,
-        tool:
-          "publicTool" in item && !available.includes(item.tool)
-            ? item.publicTool
-            : item.tool,
-      })).filter((item) => available.includes(item.tool))
-    : NAV_ITEMS.map((item) => ({ ...item, tool: item.tool as string }));
+  const nav = NAV_ITEMS.map((item) => ({
+    ...item,
+    tool: item.tool as string,
+    path: item.path as string,
+  })).filter((item) => !STANDALONE || available.includes(item.tool));
 
   // A tab is a place, so it gets a URL: shareable, refreshable, and back works.
   // The worker serves the same bundle on every path, so routing is entirely the
   // question of which tool to open.
   const open = (tool: string, path?: string, next: Locale = locale) => {
     const href = path ? pathFor(path, next) : undefined;
-    if (STANDALONE && href && window.location.pathname !== href) {
-      window.history.pushState({}, "", href);
+    if (STANDALONE && href) {
+      if (window.location.pathname !== href) {
+        window.history.pushState({}, "", href);
+      }
+      setHere(href);
     }
     if (next !== locale) setLocale(next);
     document.documentElement.lang = next;
@@ -216,9 +230,9 @@ export function App() {
     if (STANDALONE && !nav.length) return;
     initialized.current = true;
     const bootFlag = (window as { __BOOT_TOOL__?: string }).__BOOT_TOOL__;
-    const here = STANDALONE ? window.location.pathname : "";
+    const landed = STANDALONE ? window.location.pathname : "";
     const routed = STANDALONE
-      ? nav.find((item) => pathFor(item.path, locale) === here)?.tool
+      ? nav.find((item) => pathFor(item.path, locale) === landed)?.tool
       : undefined;
     const boot = bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION";
     if (STANDALONE) document.documentElement.lang = locale;
@@ -229,9 +243,10 @@ export function App() {
   useEffect(() => {
     if (!STANDALONE) return;
     const onPop = () => {
-      const here = window.location.pathname;
-      const next = localeFromPath(here);
-      const item = nav.find((entry) => pathFor(entry.path, next) === here);
+      const landed = window.location.pathname;
+      const next = localeFromPath(landed);
+      const item = nav.find((entry) => pathFor(entry.path, next) === landed);
+      setHere(landed);
       setLocale(next);
       if (item) void callTool(item.tool, argsFor(item.tool, next));
     };
@@ -254,16 +269,24 @@ export function App() {
               type="button"
               key={item.tool}
               className={
-                toolName === item.tool ||
-                (item.tool === "LIST_ALL_BOOKMARKS" && bookmarksActive)
-                  ? "active"
-                  : ""
+                STANDALONE
+                  ? here === pathFor(item.path, locale)
+                    ? "active"
+                    : ""
+                  : toolName === item.tool
+                    ? "active"
+                    : ""
               }
               onClick={() => open(item.tool, item.path)}
             >
               {item.label[locale]}
             </button>
           ))}
+          {STANDALONE && (
+            <a className="nav-away" href={BLOG_HREF}>
+              Blog
+            </a>
+          )}
         </nav>
 
         {STANDALONE && (
@@ -462,6 +485,13 @@ function ResultView({
         scores={scores}
         scorecard={asRecords(result.scorecard)}
         diagnostics={asRecords(result.diagnostics)}
+        only={
+          typeof window !== "undefined" &&
+          window.location.pathname.replace(/^\/en/, "").replace(/\/$/, "") ===
+            "/placar"
+            ? "scoreboard"
+            : "declaration"
+        }
       />
     );
   }
@@ -1406,6 +1436,7 @@ function DeclarationView({
   scores,
   scorecard,
   diagnostics,
+  only,
 }: {
   declaredFuture: string;
   conditions: string[];
@@ -1413,6 +1444,8 @@ function DeclarationView({
   scores: JsonRecord | null;
   scorecard: JsonRecord[];
   diagnostics: JsonRecord[];
+  /** Which half of this payload to render. Both live behind GET_DECLARATION. */
+  only: "declaration" | "scoreboard";
 }) {
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
   // Which commitments are lit. Empty is the resting state and shows all three;
@@ -1454,6 +1487,7 @@ function DeclarationView({
           three commitments under the name where a standfirst would go — they are
           the part a reader should be able to repeat back. Asymmetric, because a
           cover leans. */}
+      {only === "declaration" && (
       <header className="masthead">
         <div className="masthead-type">
           {/* The name reads first: whose declaration this is, then what it is.
@@ -1504,12 +1538,13 @@ function DeclarationView({
           <ThinkingOrb size={360} active={lit} />
         </div>
       </header>
+      )}
 
       {/* The declaration reads in its own place, under the spread. Selecting a
           commitment reveals the paragraph that belongs to it, in declared order
           rather than in the order they were clicked — the text is a document,
           not a log of what the reader touched. */}
-      {statements.length > 0 && (
+      {only === "declaration" && statements.length > 0 && (
         <section className="charter-card">
           {statements.map(({ text: paragraph, ink, shown }) => (
             <p
@@ -1528,6 +1563,7 @@ function DeclarationView({
           something to act on this week; the two scores are a summary of these
           and are being reconsidered, so they sit with the diagnostics until
           they earn the headline back. */}
+      {only === "scoreboard" && (
       <section className="declaration-block scores-block">
         <div className="section-heading">
           <div>
@@ -1578,7 +1614,14 @@ function DeclarationView({
           })}
         </div>
       </section>
+      )}
 
+      {only === "declaration" && (
+      <>
+      {/* Results live under the commitment they serve, and the work that
+          pursues each one sits inside it. Nine flat cards said nothing about
+          which promise anything belonged to; three groups of three say it
+          without a word of explanation. */}
       <section className="declaration-block">
         <div className="section-heading">
           <div>
@@ -1586,10 +1629,33 @@ function DeclarationView({
             <h2>{ui("strategicResults")}</h2>
           </div>
         </div>
-        <div className="strategic-results">
-          {strategicResults.map((result) => (
-            <StrategicResultCard key={text(result.id)} result={result} />
-          ))}
+        <div className="result-groups">
+          {commitments.map(({ id, label }, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const mine = strategicResults.filter(
+              (result) => text(result.commitment) === id,
+            );
+            if (!mine.length) return null;
+            return (
+              <section
+                className="result-group"
+                key={id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {label}
+                </h3>
+                {mine.map((result) => (
+                  <StrategicResultCard key={text(result.id)} result={result} />
+                ))}
+              </section>
+            );
+          })}
         </div>
       </section>
 
@@ -1606,7 +1672,10 @@ function DeclarationView({
           ))}
         </ul>
       </section>
+      </>
+      )}
 
+      {only === "scoreboard" && (
       <section className="declaration-block">
         <button
           type="button"
@@ -1635,7 +1704,7 @@ function DeclarationView({
           </>
         )}
       </section>
-
+      )}
     </article>
   );
 }
@@ -1682,57 +1751,47 @@ function ScoreCard({ score }: { score: JsonRecord }) {
 function StrategicResultCard({ result }: { result: JsonRecord }) {
   const progress = Math.min(100, Math.max(0, number(result.progress_percent)));
   const criteria = asStrings(result.acceptance_criteria);
-  const metrics = asRecords(result.metrics);
+  const projects = asRecords(result.projects);
 
   return (
     <article className="strategic-result">
       <header>
-        <div>
-          <p className="eyebrow">
-            {ui("result")} {String(number(result.position)).padStart(2, "0")}
-            {" · "}
-            {/* Declared progress next to how much active work actually points
-                here. A result at 40% with no projects is the gap the whole
-                system exists to show. */}
-            <span
-              className={
-                number(result.active_project_count) === 0 ? "serves none" : ""
-              }
-            >
-              {number(result.active_project_count) === 1
-                ? ui("oneProject")
-                : `${number(result.active_project_count)} ${ui("projects")}`}
-            </span>
-          </p>
-          <h3>{text(result.title)}</h3>
-        </div>
+        <h4>{text(result.title)}</h4>
         <strong className="result-progress">{progress}%</strong>
       </header>
-      <p className="result-narrative">{text(result.narrative)}</p>
       <div className="result-progress-track">
         <span style={{ width: `${progress}%` }} />
       </div>
-      <p className="result-progress-note">{text(result.progress_note)}</p>
-      <div className="result-details">
-        <div>
-          <p className="project-label">{ui("acceptanceCriteria")}</p>
-          <ul>
-            {criteria.map((criterion) => (
-              <li key={criterion}>{criterion}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="project-label">{ui("metrics")}</p>
-          {/* The same row the scoreboard uses, so a metric looks like itself
-              wherever it appears rather than like two different components. */}
-          <ul className="scoreboard-metrics">
-            {metrics.map((metric) => (
-              <MetricRow key={text(metric.label)} metric={metric} />
-            ))}
-          </ul>
-        </div>
-      </div>
+      <p className="result-narrative">{text(result.narrative)}</p>
+
+      {/* The work actually pointed here. A result with none is the gap this
+          whole system exists to show, so the absence is stated rather than left
+          as an empty space someone has to notice. */}
+      {projects.length > 0 ? (
+        <ul className="result-projects">
+          {projects.map((project) => (
+            <li
+              className={`result-project ${text(project.lifecycle)}`}
+              key={text(project.id)}
+            >
+              <span>{text(project.name)}</span>
+              {text(project.lifecycle) !== "active" && (
+                <small>{text(project.lifecycle)}</small>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="result-projects-empty">{ui("noProject")}</p>
+      )}
+
+      {criteria.length > 0 && (
+        <ul className="result-criteria">
+          {criteria.map((criterion) => (
+            <li key={criterion}>{criterion}</li>
+          ))}
+        </ul>
+      )}
     </article>
   );
 }

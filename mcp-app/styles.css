@@ -2870,3 +2870,184 @@ button.analytics-row:focus-visible .analytics-fill {
     transform: none;
   }
 }
+
+/* ---------- results, grouped by commitment ---------- */
+.result-groups {
+  display: grid;
+  gap: clamp(2rem, 4vh, 3rem);
+}
+
+.result-group > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid rgb(var(--ink) / 0.6);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 92;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Results sit in a row inside their group: three of them, so the group reads as
+   one promise with its parts rather than as a stack that keeps going. */
+.result-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.result-group > h3 {
+  grid-column: 1 / -1;
+}
+
+.strategic-result {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.strategic-result > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.strategic-result h4 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.strategic-result .result-progress {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--ink));
+}
+
+.strategic-result .result-progress-track {
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--ink) / 0.16);
+  overflow: hidden;
+}
+
+.strategic-result .result-progress-track > span {
+  display: block;
+  height: 100%;
+  background: rgb(var(--ink) / 0.9);
+}
+
+.strategic-result .result-narrative {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+/* The work, as chips. Small because a project has its own page; here they
+   answer one question — is anything actually pointed at this. */
+.result-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-projects li::before {
+  content: none;
+}
+
+.result-project {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid rgb(var(--ink) / 0.4);
+  border-radius: 999px;
+  background: rgb(var(--ink) / 0.1);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.result-project.draft {
+  border-style: dashed;
+  border-color: var(--border);
+  background: none;
+  color: var(--muted);
+}
+
+.result-project small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.result-projects-empty {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.result-criteria {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.result-criteria li {
+  padding-left: 0.85rem;
+  text-indent: -0.85rem;
+}
+
+.result-criteria li::before {
+  content: "· ";
+  color: rgb(var(--ink));
+}
+
+/* Off-site, so it does not pretend to be a tab. */
+.nav-away {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.nav-away::after {
+  content: " ↗";
+  font-size: 0.8em;
+}
+
+.nav-away:hover {
+  color: var(--text);
+}

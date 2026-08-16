@@ -36,7 +36,14 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
 
   // Every view, in both languages. `/en/...` mirrors the site, where the URL is
   // the source of truth for language rather than a cookie.
-  const VIEWS = ["/", "/projects", "/analytics", "/learning", "/bookmarks"];
+  const VIEWS = [
+    "/",
+    "/projects",
+    "/placar",
+    "/analytics",
+    "/learning",
+    "/bookmarks",
+  ];
   const VIEW_PATHS = new Set([
     ...VIEWS,
     ...VIEWS.map((view) => (view === "/" ? "/en/" : `/en${view}`)),
