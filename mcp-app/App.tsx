@@ -1852,19 +1852,40 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
           as an empty space someone has to notice. */}
       {projects.length > 0 ? (
         <ul className="result-projects">
-          {projects.map((project) => (
-            <li
-              className={`result-project ${text(project.lifecycle)} ${
-                project.primary === true ? "primary" : "secondary"
-              }`}
-              key={text(project.id)}
-            >
-              <span>{text(project.name)}</span>
-              {text(project.lifecycle) !== "active" && (
-                <small>{text(project.lifecycle)}</small>
-              )}
-            </li>
-          ))}
+          {projects.map((project) => {
+            const repo = text(project.repo);
+            const inside = (
+              <>
+                <span>{text(project.name)}</span>
+                {text(project.lifecycle) !== "active" && (
+                  <small>{text(project.lifecycle)}</small>
+                )}
+              </>
+            );
+            return (
+              <li
+                className={`result-project ${text(project.lifecycle)} ${
+                  project.primary === true ? "primary" : "secondary"
+                }`}
+                key={text(project.id)}
+              >
+                {/* The claim and the artifact that opens it, one click apart. A
+                    private repo 404s for a stranger, which is a truthful answer
+                    — the alternative is not saying the code exists. */}
+                {repo ? (
+                  <a
+                    href={`https://github.com/${repo}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {inside}
+                  </a>
+                ) : (
+                  inside
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 

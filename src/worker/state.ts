@@ -184,7 +184,14 @@ export async function getDeclarationDashboard(
         // How much active work is actually pointed at this result. Zero here on
         // a result with progress is the interesting disagreement.
         active_project_count: projectsByResult.get(result.id) ?? 0,
-        projects: workByResult.get(result.id) ?? [],
+        // Aimed-at first, then the ones contributing on their way elsewhere,
+        // then drafts. Declaration order put the focused project sixth out of
+        // seven, which buried the one fact the list exists to state.
+        projects: (workByResult.get(result.id) ?? []).slice().sort((a, b) =>
+          Number(b.primary) - Number(a.primary) ||
+          Number(a.lifecycle === "draft") - Number(b.lifecycle === "draft") ||
+          a.name.localeCompare(b.name),
+        ),
       };
     });
 
