@@ -1464,7 +1464,6 @@ function DeclarationView({
               {declaration.author ?? "Guilherme Rodrigues"}
             </span>
             <span>{ui("declarationTitle")}</span>
-            <span className="masthead-rule" aria-hidden="true" />
           </h1>
           {commitments.length > 0 && (
             <ol className="commitments">

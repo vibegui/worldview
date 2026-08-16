@@ -2660,15 +2660,16 @@ button.analytics-row:focus-visible .analytics-fill {
   text-wrap: balance;
 }
 
-.masthead-rule {
-  width: clamp(3rem, 9vw, 7rem);
-  height: 3px;
-  background: var(--accent);
-}
 
+/* The rule is the name's own underline rather than a separate element, so it is
+   exactly as long as the name is — at every viewport, in either language, and
+   whoever the name belongs to. A fixed-width bar under a fluid heading is a
+   coincidence waiting to stop being one. */
 .masthead-author {
   order: -1;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 3px solid var(--accent);
   font-variation-settings: "wdth" 84;
   font-weight: 600;
   font-size: clamp(0.95rem, 1.5vw, 1.15rem);
