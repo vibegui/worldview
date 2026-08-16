@@ -4,5 +4,10 @@ dist-mcp/
 .wrangler/
 .dev.vars
 .env
+# `bun run db:pull` writes production data here: real memories, decisions, and
+# bookmarks. The one file in this repo that must never reach a remote.
+.snapshot.sql
 *.log
 .DS_Store
+src/generated/
+.context/

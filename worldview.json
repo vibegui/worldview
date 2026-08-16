@@ -1,212 +1,559 @@
 {
   "version": 1,
   "instance": "vibegui",
-  "declaredFuture": "I am building a world where everyone keeps their declared future in git — versioned, forkable, reviewable — and runs a machine that turns it into content and code.\n\nMy own life is the first instance. Every project I care about has a place in the whole: a declared outcome, an honest current state, a memory, and a next move I can make today. The people who matter stay present, with enough real context to know when to reconnect, offer help, or ask for it. The books, people, and projects that shaped me are a living library instead of a pile of content, and my files are findable instead of scattered across three drives. The distinctions I wish I'd had at 25 are available through a conversation that lands — and what someone gets from one becomes something they can share.\n\nNot a faster factory. A factory that knows what it is for.\n\nTwo scores, no others: alignment and integrity. Alignment: does what I am doing serve the future I declared. Integrity: is it whole and complete — my word, my systems, my objects. Everything else is machinery, and machinery follows.\n\nFrom Rio, in the open — because a method nobody can copy is a hobby, and a method its author will not live inside is a lie.",
+  "name": "vibegui ⋅ Worldview",
+  "declaredFuture": {
+    "pt-BR": "Meu sucesso contribui para tornar o Brasil um protagonista global em tecnologia. Sou causa no sucesso de outras empresas globais Brasileiras. Foco nos motivos para dar certo.\n\nAmplifico a liberdade para ser e agir das pessoas ao meu redor. Combato aqueles que buscam restringir a liberdade dos outros. Sou atento às minhas próprias limitações.\n\nA fonte do meu poder é a serenidade do futuro poderoso. A vida é curta demais para estar incompleto. Faço o melhor possível a cada dia.",
+    "en": "My success contributes to making Brazil a global protagonist in technology. I am cause in the success of other global Brazilian companies. I focus on the reasons it will work.\n\nI amplify the freedom to be and to act of the people around me. I stand against those who would restrict the freedom of others. I am attentive to my own limitations.\n\nThe source of my power is the serenity of a powerful future. Life is too short to be incomplete. I do the best I can each day."
+  },
   "scores": {
     "alignment": {
-      "label": "Alignment",
-      "question": "Does what I am doing serve the future I declared?",
-      "measure": "Share of active work traceable to a declared outcome.",
+      "label": {
+        "pt-BR": "Alinhamento",
+        "en": "Alignment"
+      },
+      "question": {
+        "pt-BR": "O que estou fazendo serve o futuro que declarei?",
+        "en": "Does what I am doing serve the future I declared?"
+      },
+      "measure": {
+        "pt-BR": "Parcela do trabalho ativo rastreável até um resultado declarado.",
+        "en": "Share of active work traceable to a declared outcome."
+      },
       "kind": "percent"
     },
     "integrity": {
-      "label": "Integrity",
-      "question": "Is it whole and complete?",
-      "measure": "Count of word items currently unacknowledged. Target zero — integrity is a mountain with no top, so this is never a percentage.",
+      "label": {
+        "pt-BR": "Integridade",
+        "en": "Integrity"
+      },
+      "question": {
+        "pt-BR": "Está inteiro e completo?",
+        "en": "Is it whole and complete?"
+      },
+      "measure": {
+        "pt-BR": "Contagem de itens de palavra atualmente não reconhecidos. Meta zero — integridade é uma montanha sem topo, então isto nunca é porcentagem.",
+        "en": "Count of word items currently unacknowledged. Target zero — integrity is a mountain with no top, so this is never a percentage."
+      },
       "kind": "count-to-zero",
       "domains": {
-        "word": "What I said, what I know to do, what is expected of me, what I assert is true, what I stand for, and the standards I operate under. Kept, or honored when it cannot be kept.",
-        "systems": "Design, implementation, and use integrity. Secrets stay server-side, permissions are real, the reviewer is not the author.",
-        "objects": "Every claim has an artifact that opens. A green check nobody can open is a rumor."
+        "word": {
+          "pt-BR": "O que eu disse, o que sei fazer, o que se espera de mim, o que afirmo ser verdade, o que defendo e os padrões sob os quais opero. Cumprido, ou honrado quando não puder ser cumprido.",
+          "en": "What I said, what I know to do, what is expected of me, what I assert is true, what I stand for, and the standards I operate under. Kept, or honored when it cannot be kept."
+        },
+        "systems": {
+          "pt-BR": "Integridade de design, implementação e uso. Segredos ficam no servidor, permissões são reais, o revisor não é o autor.",
+          "en": "Design, implementation, and use integrity. Secrets stay server-side, permissions are real, the reviewer is not the author."
+        },
+        "objects": {
+          "pt-BR": "Toda afirmação tem um artefato que abre. Um check verde que ninguém consegue abrir é boato.",
+          "en": "Every claim has an artifact that opens. A green check nobody can open is a rumor."
+        }
       }
     }
   },
   "conditionsOfSatisfaction": [
-    "Human direction remains sovereign.",
-    "Private and public are separate by construction.",
-    "Personal data stays under personal control.",
-    "Trust beats confident enrichment.",
-    "The method is copyable.",
-    "Depth wins over content volume.",
-    "Spread curiosity is visible; execution is concentrated.",
-    "Sources remain visible.",
-    "Memory is accountable.",
-    "Nothing publishes itself.",
-    "The experience is elegant and inviting.",
-    "The system runs on itself."
+    {
+      "pt-BR": "Saúde, música, aprendizado e família acontecem todos os dias.",
+      "en": "Health, music, learning, and family happen every day."
+    },
+    {
+      "pt-BR": "Serenidade sob pressão. Sem hustle heroico — é uma maratona.",
+      "en": "Serenity under pressure. No heroic hustle — it is a marathon."
+    },
+    {
+      "pt-BR": "Tenho o privilégio de conviver com pessoas melhores e mais inteligentes que eu, que me desafiam todos os dias.",
+      "en": "I have the privilege of living among people better and smarter than me, who challenge me every day."
+    },
+    {
+      "pt-BR": "Integridade acima de growth hacks. Minha reputação como autor e desenvolvedor nunca é trocada por um KPI de curto prazo.",
+      "en": "Integrity above growth hacks. My reputation as an author and a developer is never traded for a short-term KPI."
+    },
+    {
+      "pt-BR": "Ganhar só por assimetria de informação não vale a pena.",
+      "en": "Winning only through information asymmetry is not worth winning."
+    },
+    {
+      "pt-BR": "O método roda no aberto e é copiável.",
+      "en": "The method runs in public and is copyable."
+    },
+    {
+      "pt-BR": "A direção humana permanece soberana.",
+      "en": "Human direction remains sovereign."
+    },
+    {
+      "pt-BR": "Privado e público são separados por construção.",
+      "en": "Private and public are separate by construction."
+    },
+    {
+      "pt-BR": "Dados pessoais permanecem sob controle pessoal.",
+      "en": "Personal data stays under personal control."
+    },
+    {
+      "pt-BR": "Profundidade vence volume de conteúdo.",
+      "en": "Depth wins over content volume."
+    },
+    {
+      "pt-BR": "As fontes permanecem visíveis.",
+      "en": "Sources remain visible."
+    },
+    {
+      "pt-BR": "Nada se publica sozinho.",
+      "en": "Nothing publishes itself."
+    }
   ],
   "strategicResults": [
     {
-      "id": "agency",
+      "id": "brasil",
       "position": 1,
-      "stage": "ideas",
-      "title": "My projects move as one portfolio",
-      "narrative": "Every active personal project is visible in one map, connected to an explicit outcome and the evidence of whether it is moving. The gap between the declaration and the measurement is the work.",
+      "stage": "expansion",
+      "title": {
+        "pt-BR": "Sou causa no sucesso de outras empresas globais Brasileiras",
+        "en": "I am cause in the success of other global Brazilian companies"
+      },
+      "narrative": {
+        "pt-BR": "O ecossistema tech brasileiro é vibrante e exportador, e um jovem desenvolvedor daqui enxerga um caminho claro para impacto global sem sair do país. Sou uma das pessoas que tornaram esse caminho legível — pelo que construo, pelo que financio e pelo que digo em público.",
+        "en": "The Brazilian tech ecosystem is vibrant and exporting, and a young developer here can see a clear path to global impact without leaving the country. I am one of the people who made that path legible — through what I build, what I fund, and what I say in public."
+      },
       "acceptanceCriteria": [
-        "Every active project has a goal, success criteria, state, and next review",
-        "A useful daily brief is reviewed at least five times per week",
-        "The system surfaces stale commitments and recommends concrete next steps"
+        {
+          "pt-BR": "Ideias potentes sobre o caminho do Brasil chegam a quem não estava procurando por elas",
+          "en": "Powerful ideas about Brazil's path reach people who were not already looking for them"
+        },
+        {
+          "pt-BR": "Fundadores que apoio constroem do Brasil para o mundo",
+          "en": "Founders I back are building from Brazil for the world"
+        },
+        {
+          "pt-BR": "O que aprendi tocando uma empresa aqui é publicado, não guardado",
+          "en": "What I learned running a company here is published, not hoarded"
+        }
       ],
       "metrics": [
-        { "label": "Active projects with goals", "target": 4, "unit": "projects" },
-        { "label": "Daily briefs reviewed", "target": 5, "unit": "per week" }
-      ]
+        {
+          "id": "angel-investments",
+          "label": {
+            "pt-BR": "Fundadores apoiados",
+            "en": "Founders backed"
+          },
+          "target": 25,
+          "unit": {
+            "pt-BR": "investimentos-anjo",
+            "en": "angel investments"
+          }
+        },
+        {
+          "id": "brasil-artifacts",
+          "label": {
+            "pt-BR": "Conversas que viraram artefatos",
+            "en": "Conversations that became artifacts"
+          },
+          "target": 12,
+          "unit": {
+            "pt-BR": "artefatos",
+            "en": "artifacts"
+          }
+        }
+      ],
+      "commitment": "brasil"
     },
     {
-      "id": "research",
+      "id": "autonomy",
       "position": 2,
-      "stage": "expansion",
-      "title": "Prior art is available before a branch exists",
-      "narrative": "What already exists — inside my own writing and outside it — is searchable at the moment an idea is shaped, so I stop rediscovering things I already said.",
-      "acceptanceCriteria": [
-        "The corpus answers \"have I already written this\" in one query",
-        "Bookmarks are enriched and searchable, not a dead list",
-        "A shaped proposal cites its prior art"
-      ],
-      "metrics": [
-        { "label": "Enriched sources", "target": 20, "unit": "sources" }
-      ]
-    },
-    {
-      "id": "validation",
-      "position": 3,
-      "stage": "expansion",
-      "title": "Ideas can die before they cost a week",
-      "narrative": "Between an idea and a branch there is work that is not code: the smallest test that could embarrass the idea. This stage prevents shipping the wrong thing faster.",
-      "acceptanceCriteria": [
-        "Work carries acceptance criteria written before the branch exists",
-        "At least one idea dies in this stage on purpose",
-        "Validation names who it was tested with"
-      ],
-      "metrics": [
-        { "label": "Ideas killed in expansion", "target": 1, "unit": "on purpose" }
-      ]
-    },
-    {
-      "id": "software-factory",
-      "position": 4,
       "stage": "execution",
-      "title": "The factory is a connection, not a rebuild",
-      "narrative": "Execution belongs to Runtime. This system declares, measures, and scores; it never writes code, opens a pull request, or ships. The factory reads the gap and works it.",
+      "title": {
+        "pt-BR": "Construo uma software factory agêntica open source brasileira",
+        "en": "I build a Brazilian open-source agentic software factory"
+      },
+      "narrative": {
+        "pt-BR": "A deco torna experiências digitais autônomas — marcas entregam funções inteiras a um colega de time que lembra, trabalha de madrugada e aparece com o trabalho feito. É construída no aberto e no Brasil: os rituais e métodos com que tocamos a empresa são publicados, e outras empresas os replicaram.",
+        "en": "deco makes digital experiences autonomous — brands hand whole functions to a teammate that remembers, works overnight, and shows up with the work done. It is built in the open and in Brazil: the rituals and methods we run the company with are published, and other companies have replicated them."
+      },
       "acceptanceCriteria": [
-        "A work queue populates from the gap without anyone typing a task",
-        "Every work item names the declared outcome it serves and the measurement that exposed it",
-        "No work item completes without an artifact that opens"
+        {
+          "pt-BR": "Os rituais e métodos operacionais da deco são open source",
+          "en": "deco's own operating rituals and methods are open source"
+        },
+        {
+          "pt-BR": "Outra empresa replicou o método e disse isso em público",
+          "en": "Another company has replicated the method and said so in public"
+        },
+        {
+          "pt-BR": "A empresa roda AI-native — operamos do jeito que dizemos aos clientes para operar",
+          "en": "The company runs AI-native — we operate the way we tell customers to operate"
+        }
       ],
       "metrics": [
-        { "label": "Queue items derived from the gap", "target": 1, "unit": "working loop" }
-      ]
-    },
-    {
-      "id": "understanding",
-      "position": 5,
-      "stage": "content",
-      "title": "Important distinctions can be gotten through conversation",
-      "narrative": "A navigable graph of distinctions across leadership, integrity, future-based language, software, AI, Brazil, and the other subjects I stand for — each with a clear essay, its sources, and a path that creates the possibility of a genuine change in perspective.",
-      "acceptanceCriteria": [
-        "Twelve distinctions have an essay, graph position, sources, and guided path",
-        "Readers complete real guided conversations",
-        "Repeatable paths that help people get a distinction are identified"
+        {
+          "id": "methods-published",
+          "label": {
+            "pt-BR": "Métodos operacionais publicados",
+            "en": "Operating methods published"
+          },
+          "target": 6,
+          "unit": {
+            "pt-BR": "métodos",
+            "en": "methods"
+          }
+        },
+        {
+          "id": "methods-replicated",
+          "label": {
+            "pt-BR": "Empresas que os replicaram",
+            "en": "Companies that replicated them"
+          },
+          "target": 3,
+          "unit": {
+            "pt-BR": "empresas",
+            "en": "companies"
+          }
+        }
       ],
-      "metrics": [
-        { "label": "Structured distinctions", "target": 12, "unit": "distinctions" },
-        { "label": "Validated conversation paths", "target": 12, "unit": "paths" }
-      ]
-    },
-    {
-      "id": "compounding",
-      "position": 6,
-      "stage": "content",
-      "title": "My library and conversations make each other better",
-      "narrative": "Books and source materials are mapped to concepts and distinctions. Conversations reveal where an idea remains unclear and what deserves development, and those signals enter a review pipeline that never turns model output into truth by default.",
-      "acceptanceCriteria": [
-        "Twenty books or primary sources are mapped",
-        "Conversation signals enter a private review pipeline",
-        "No model output becomes public truth without review"
-      ],
-      "metrics": [
-        { "label": "Mapped sources", "target": 20, "unit": "sources" },
-        { "label": "Reviewed conversation signals", "target": 1, "unit": "working loop" }
-      ]
+      "commitment": "brasil"
     },
     {
       "id": "expression",
-      "position": 7,
+      "position": 3,
       "stage": "distribution",
-      "title": "Conversations become artifacts worth sharing",
-      "narrative": "When a reader gets something important, it can become a beautiful, consented, cited artifact that brings another person into the conversation without exposing private detail.",
+      "title": {
+        "pt-BR": "Publico todo dia, e quem lê confia no que encontra",
+        "en": "I publish every day, and the people who read it trust what they find"
+      },
+      "narrative": {
+        "pt-BR": "vibegui.com é uma publicação diária sobre liderança com integridade, tecnologia web e agentes de IA. Quando um leitor pega algo importante, aquilo pode virar um artefato bonito e consentido do que mudou e de quais fontes sustentam — artefatos que trazem gente nova sem expor conversa privada.",
+        "en": "vibegui.com is a daily publication on leadership with integrity, web technology, and AI agents. When a reader gets something important, it can become a beautiful, consented artifact of what shifted and which sources support it — artifacts that bring new people in without exposing private conversation."
+      },
       "acceptanceCriteria": [
-        "A conversation can produce a redacted and consented artifact",
-        "Every artifact cites its sources and map location",
-        "Organic sharing happens repeatedly and establishes a baseline"
+        {
+          "pt-BR": "Existe uma sequência de publicação e ela está intacta",
+          "en": "A publishing streak exists and is unbroken"
+        },
+        {
+          "pt-BR": "Uma conversa pode produzir um artefato redigido e consentido",
+          "en": "A conversation can produce a redacted, consented artifact"
+        },
+        {
+          "pt-BR": "Todo artefato cita suas fontes e seu lugar no grafo",
+          "en": "Every artifact cites its sources and its place in the graph"
+        }
       ],
       "metrics": [
-        { "label": "Shareable artifact flow", "target": 1, "unit": "working flow" },
-        { "label": "Share-rate baseline", "target": 1, "unit": "measured baseline" }
-      ]
+        {
+          "id": "publishing-streak",
+          "label": {
+            "pt-BR": "Dias consecutivos publicando",
+            "en": "Consecutive days publishing"
+          },
+          "target": 365,
+          "unit": {
+            "pt-BR": "dias",
+            "en": "days"
+          }
+        },
+        {
+          "id": "monthly-readers",
+          "label": {
+            "pt-BR": "Leitores mensais",
+            "en": "Monthly readers"
+          },
+          "target": 250000,
+          "unit": {
+            "pt-BR": "leitores por mês",
+            "en": "readers per month"
+          }
+        }
+      ],
+      "commitment": "liberdade"
     },
     {
-      "id": "multiplication",
-      "position": 8,
-      "stage": "distribution",
-      "title": "Anyone can keep their declared future in git",
-      "narrative": "The copyable thing is not a template of my tooling — it is the declaration itself. A person can fork this, write their own future, connect it to the factory they already use, and begin without becoming an infrastructure expert.",
+      "id": "understanding",
+      "position": 4,
+      "stage": "content",
+      "title": {
+        "pt-BR": "Entrego distinções importantes em conversa, e a metodologia viaja sem mim",
+        "en": "I deliver important distinctions in conversation, and the methodology travels without me"
+      },
+      "narrative": {
+        "pt-BR": "Um grafo navegável de distinções sobre liderança, integridade, linguagem de futuro, software, IA e Brasil, entregues por experiências agênticas em vez de por mim numa sala. Quando isso funciona, uma aceleradora ensina o método a partir dos próprios materiais e eu não estou presente.",
+        "en": "A navigable graph of distinctions across leadership, integrity, future-based language, software, AI, and Brazil, delivered through agentic experiences rather than by me in a room. When it works, an accelerator teaches the method from its own materials and I am not there."
+      },
       "acceptanceCriteria": [
-        "A new person reaches a useful first gap report from the documentation alone",
-        "Ten independent declarations are running",
-        "Three independent maintainers contribute"
+        {
+          "pt-BR": "Doze distinções têm ensaio, posição no grafo, fontes e caminho guiado",
+          "en": "Twelve distinctions have an essay, graph position, sources, and a guided path"
+        },
+        {
+          "pt-BR": "Vinte livros ou fontes primárias estão mapeados nessas distinções",
+          "en": "Twenty books or primary sources are mapped to those distinctions"
+        },
+        {
+          "pt-BR": "Uma aceleradora ou empresa ensina o método a partir dos próprios materiais",
+          "en": "An accelerator or company teaches the method from its own materials"
+        }
       ],
       "metrics": [
-        { "label": "Independent declarations", "target": 10, "unit": "deployments" },
-        { "label": "Independent maintainers", "target": 3, "unit": "maintainers" }
-      ]
+        {
+          "id": "distinctions",
+          "label": {
+            "pt-BR": "Distinções estruturadas",
+            "en": "Structured distinctions"
+          },
+          "target": 12,
+          "unit": {
+            "pt-BR": "distinções",
+            "en": "distinctions"
+          }
+        },
+        {
+          "id": "sources",
+          "label": {
+            "pt-BR": "Fontes mapeadas",
+            "en": "Mapped sources"
+          },
+          "target": 20,
+          "unit": {
+            "pt-BR": "fontes",
+            "en": "sources"
+          }
+        },
+        {
+          "id": "future-driven-orgs",
+          "label": {
+            "pt-BR": "Organizações que rodaram um ciclo",
+            "en": "Organizations that ran a cycle"
+          },
+          "target": 25,
+          "unit": {
+            "pt-BR": "organizações",
+            "en": "organizations"
+          }
+        }
+      ],
+      "commitment": "liberdade"
+    },
+    {
+      "id": "agency",
+      "position": 5,
+      "stage": "ideas",
+      "title": {
+        "pt-BR": "Movo meus projetos como um portfólio só",
+        "en": "I move my projects as a single portfolio"
+      },
+      "narrative": {
+        "pt-BR": "Todo projeto ativo está visível em um mapa, ligado a um resultado explícito e à evidência de que está andando. A distância entre a declaração e a medição é o trabalho.",
+        "en": "Every active project is visible in one map, connected to an explicit outcome and the evidence of whether it is moving. The gap between the declaration and the measurement is the work."
+      },
+      "acceptanceCriteria": [
+        {
+          "pt-BR": "Todo projeto ativo tem objetivo, critérios de sucesso, estado e próxima revisão",
+          "en": "Every active project has a goal, success criteria, state, and next review"
+        },
+        {
+          "pt-BR": "Um brief diário útil é revisado pelo menos cinco vezes por semana",
+          "en": "A useful daily brief is reviewed at least five times per week"
+        },
+        {
+          "pt-BR": "O sistema mostra compromissos parados e recomenda próximos passos concretos",
+          "en": "The system surfaces stale commitments and recommends concrete next steps"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "project-coverage",
+          "label": {
+            "pt-BR": "Projetos ativos com objetivo",
+            "en": "Active projects with goals"
+          },
+          "target": 5,
+          "unit": {
+            "pt-BR": "projetos",
+            "en": "projects"
+          }
+        },
+        {
+          "id": "daily-briefs",
+          "label": {
+            "pt-BR": "Briefs diários revisados",
+            "en": "Daily briefs reviewed"
+          },
+          "target": 5,
+          "unit": {
+            "pt-BR": "por semana",
+            "en": "per week"
+          }
+        }
+      ],
+      "commitment": "liberdade"
     },
     {
       "id": "relationships",
-      "position": 9,
-      "score": "alignment",
-      "title": "Important connections do not disappear",
-      "narrative": "A trustworthy map of the people who matter across the different chapters of my life, grounded in evidence from sources I control — because the people around you shape the future you are able to declare.",
+      "position": 6,
+      "title": {
+        "pt-BR": "Mantenho presentes as conexões que importam",
+        "en": "I keep the connections that matter present"
+      },
+      "narrative": {
+        "pt-BR": "Um mapa confiável das pessoas que importam nos diferentes capítulos da minha vida, apoiado em evidência de fontes que eu controlo — porque as pessoas ao meu redor moldam o futuro que eu consigo declarar.",
+        "en": "A trustworthy map of the people who matter across the different chapters of my life, grounded in evidence from sources I control — because the people around me shape the future I am able to declare."
+      },
       "acceptanceCriteria": [
-        "The first trusted circle is mapped with provenance",
-        "Identity merges and relationship claims are reviewable",
-        "The system can explain why a person may help and where I can help first"
+        {
+          "pt-BR": "O primeiro círculo de confiança está mapeado com procedência",
+          "en": "The first trusted circle is mapped with provenance"
+        },
+        {
+          "pt-BR": "Fusões de identidade e afirmações sobre relações são revisáveis",
+          "en": "Identity merges and relationship claims are reviewable"
+        },
+        {
+          "pt-BR": "O sistema explica por que uma pessoa pode ajudar e onde eu posso ajudar primeiro",
+          "en": "The system can explain why a person may help and where I can help first"
+        }
       ],
       "metrics": [
-        { "label": "Trusted circle mapped", "target": 1, "unit": "complete circle" },
-        { "label": "Verified relationship records", "target": 1, "unit": "working set" }
-      ]
+        {
+          "id": "trusted-circle",
+          "label": {
+            "pt-BR": "Círculo de confiança mapeado",
+            "en": "Trusted circle mapped"
+          },
+          "target": 1,
+          "unit": {
+            "pt-BR": "círculo completo",
+            "en": "complete circle"
+          }
+        },
+        {
+          "id": "relationship-records",
+          "label": {
+            "pt-BR": "Registros de relação verificados",
+            "en": "Verified relationship records"
+          },
+          "target": 1,
+          "unit": {
+            "pt-BR": "conjunto de trabalho",
+            "en": "working set"
+          }
+        }
+      ],
+      "commitment": "serenidade"
     },
     {
-      "id": "word",
-      "position": 10,
-      "score": "integrity",
-      "title": "My word exists when it comes time to keep it",
-      "narrative": "The failure this system exists to defeat: not having your word exist at the moment it comes due. Commitments are tracked, and honoring one I cannot keep — acknowledge, say what happens instead and by when, clean up — is a first-class move rather than an apology.",
+      "id": "vitality",
+      "position": 7,
+      "title": {
+        "pt-BR": "Cuido de saúde, música, aprendizado e família todos os dias",
+        "en": "I tend to health, music, learning, and family every day"
+      },
+      "narrative": {
+        "pt-BR": "O inegociável. Escrita, música, exercício e leitura são uma sequência diária, não o que sobra, e o tempo com a família não é a variável que absorve um trimestre difícil. Nada nesta declaração vale ser alcançado trocando isto.",
+        "en": "The non-negotiable one. Writing, music, exercise, and reading are a daily streak rather than what is left over, and family time is not the variable that absorbs a hard quarter. Nothing in this declaration is worth reaching by trading this away."
+      },
       "acceptanceCriteria": [
-        "Every commitment has an owner and a by-when",
-        "A commitment that will not be kept can be honored in one step",
-        "The system can show, unprompted, a promise it did not keep"
+        {
+          "pt-BR": "Existe e está visível uma sequência diária de escrita, música, exercício e leitura",
+          "en": "A daily streak of writing, music, exercise, and reading exists and is visible"
+        },
+        {
+          "pt-BR": "Tempo de família é agendado primeiro, não por último",
+          "en": "Family time is scheduled first, not last"
+        },
+        {
+          "pt-BR": "Nenhum trimestre é entregue tomando emprestado da saúde",
+          "en": "No quarter is delivered by borrowing against health"
+        }
       ],
       "metrics": [
-        { "label": "Unacknowledged commitments", "target": 0, "unit": "items" }
-      ]
+        {
+          "id": "vitality-streak",
+          "label": {
+            "pt-BR": "Sequência diária",
+            "en": "Daily streak"
+          },
+          "target": 120,
+          "unit": {
+            "pt-BR": "dias consecutivos",
+            "en": "consecutive days"
+          }
+        }
+      ],
+      "commitment": "serenidade"
     },
     {
       "id": "order",
-      "position": 11,
-      "score": "integrity",
-      "title": "My personal files form a usable library",
-      "narrative": "Integrity of objects: files across Mac, iCloud, and Drive searchable as one private map, with a canonical copy that is knowable and reversible operations only.",
+      "position": 8,
+      "title": {
+        "pt-BR": "Encontro qualquer arquivo meu em um mapa só",
+        "en": "I find any file of mine in one map"
+      },
+      "narrative": {
+        "pt-BR": "Arquivos no Mac, iCloud e Drive pesquisáveis como um mapa privado só, com uma cópia canônica conhecível e toda operação reversível.",
+        "en": "Files across Mac, iCloud, and Drive searchable as one private map, with a canonical copy that is knowable and every operation reversible."
+      },
       "acceptanceCriteria": [
-        "Mac, iCloud, and Google Drive are indexed",
-        "Canonical and duplicate candidates are visible",
-        "Every move or archive operation has a dry run, audit trail, and recovery path"
+        {
+          "pt-BR": "Mac, iCloud e Google Drive estão indexados",
+          "en": "Mac, iCloud, and Google Drive are indexed"
+        },
+        {
+          "pt-BR": "Candidatos canônicos e duplicados estão visíveis",
+          "en": "Canonical and duplicate candidates are visible"
+        },
+        {
+          "pt-BR": "Toda operação de mover ou arquivar tem simulação, trilha de auditoria e caminho de recuperação",
+          "en": "Every move or archive operation has a dry run, an audit trail, and a recovery path"
+        }
       ],
       "metrics": [
-        { "label": "Storage sources indexed", "target": 3, "unit": "sources" },
-        { "label": "Reversible organization flow", "target": 1, "unit": "working flow" }
-      ]
+        {
+          "id": "storage-map",
+          "label": {
+            "pt-BR": "Fontes de armazenamento indexadas",
+            "en": "Storage sources indexed"
+          },
+          "target": 3,
+          "unit": {
+            "pt-BR": "fontes",
+            "en": "sources"
+          }
+        },
+        {
+          "id": "storage-incidents",
+          "label": {
+            "pt-BR": "Operações automáticas irrecuperáveis",
+            "en": "Unrecoverable automated operations"
+          },
+          "target": 0,
+          "unit": {
+            "pt-BR": "incidentes",
+            "en": "incidents"
+          }
+        }
+      ],
+      "commitment": "serenidade"
+    }
+  ],
+  "commitments": [
+    {
+      "id": "brasil",
+      "label": {
+        "pt-BR": "Brasil protagonista em Tecnologia",
+        "en": "Brazil, a protagonist in technology"
+      }
+    },
+    {
+      "id": "liberdade",
+      "label": {
+        "pt-BR": "Liberdade para ser e agir",
+        "en": "Freedom to be and to act"
+      }
+    },
+    {
+      "id": "serenidade",
+      "label": {
+        "pt-BR": "Poder é sereno",
+        "en": "Power is serene"
+      }
     }
   ]
 }

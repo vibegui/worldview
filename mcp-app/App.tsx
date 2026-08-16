@@ -1,69 +1,413 @@
-import { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { BookmarksView, isBookmarkTool } from "./bookmarks/BookmarksView";
+import { STRAND_INKS, ThinkingOrb } from "./ThinkingOrb";
 import { useMcp } from "./mcp";
+
+const globals = (typeof window !== "undefined" ? window : {}) as {
+  __STANDALONE__?: boolean;
+  __WORLDVIEW__?: {
+    name?: string;
+    results?: Record<string, string>;
+    commitments?: Array<{ id: string; label: string }>;
+    author?: string;
+  };
+};
+
+const STANDALONE = globals.__STANDALONE__ === true;
+
+/**
+ * The instance's declaration, injected by the worker when it serves this bundle.
+ *
+ * It cannot be imported: this file is built once, into the library, while the
+ * declaration belongs to whichever instance is serving it. Baking it in at
+ * library build time would ship one person's worldview to everyone.
+ */
+const declaration = globals.__WORLDVIEW__ ?? {};
+const resultTitles: Record<string, string> = declaration.results ?? {};
+const COMMITMENTS = declaration.commitments ?? [];
 
 type JsonRecord = Record<string, unknown>;
 
+// The loop, in order: declare a future, run the projects that pursue it, see how
+// they are performing, keep what you learned, and accumulate what you learned
+// from. Goals and Inbox are gone as destinations — a goal belongs to the project
+// it serves, and an unfiled capture surfaces at the top of Projects.
+//
+// Each tab names the tool it opens, and a tab only renders when the server says
+// this caller may call it. So a stranger sees the declaration and the library;
+// the owner sees the same page with more of it. One boundary, already enforced
+// twice on the server, deciding the navigation too — rather than a second
+// public frontend that drifts from this one.
 const NAV_ITEMS = [
-  { label: "Declaration", tool: "GET_DECLARATION" },
-  { label: "Analytics", tool: "SITES_OVERVIEW" },
-  { label: "Projects", tool: "GET_PORTFOLIO" },
-  { label: "Goals", tool: "LIST_GOALS" },
-  { label: "Inbox", tool: "GET_INBOX" },
-  { label: "Bookmarks", tool: "LIST_ALL_BOOKMARKS" },
-  { label: "Memory", tool: "RECALL_MEMORY" },
+  {
+    label: { en: "Declaration 2030", "pt-BR": "Declaração 2030" },
+    tool: "GET_DECLARATION",
+    path: "/",
+  },
+  {
+    // Three tabs share GET_DECLARATION. That payload answers three questions and
+    // they are read at different moments — the declaration when you want to
+    // remember what you said, the scoreboard when you want a number, the results
+    // when you want to know whether the game is being played. One page holding
+    // all three meant scrolling past two to reach the one you came for.
+    label: { en: "Scoreboard", "pt-BR": "Placar" },
+    tool: "GET_DECLARATION",
+    path: "/placar",
+  },
+  {
+    label: { en: "Results", "pt-BR": "Resultados" },
+    tool: "GET_DECLARATION",
+    path: "/resultados",
+  },
+  {
+    label: { en: "Projects", "pt-BR": "Projetos" },
+    tool: "GET_PORTFOLIO",
+    path: "/projects",
+  },
+  {
+    label: { en: "Analytics", "pt-BR": "Analytics" },
+    tool: "SITES_OVERVIEW",
+    path: "/analytics",
+  },
+  {
+    label: { en: "Learning", "pt-BR": "Aprendizado" },
+    tool: "RECALL_MEMORY",
+    path: "/learning",
+  },
 ] as const;
 
+/** Off-site, so it is a link and not a tab. */
+const BLOG_HREF = "https://vibegui.com";
+
+type Locale = "en" | "pt-BR";
+
+/**
+ * The URL is the source of truth for language, the way vibegui.com does it:
+ * `/en/...` is English and everything else is Portuguese. No cookie, no
+ * negotiation — a link someone shares opens in the language they were reading.
+ */
+function localeFromPath(pathname: string): Locale {
+  return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "pt-BR";
+}
+
+// Only the tools that declare a `locale` input get one. Sending it to the rest
+// would be an argument they never asked for, on a schema that says otherwise.
+const LOCALE_AWARE = ["GET_DECLARATION", "GET_PORTFOLIO", "GET_PROJECT"];
+
+function argsFor(tool: string, locale: Locale): Record<string, unknown> {
+  return LOCALE_AWARE.includes(tool) ? { locale } : {};
+}
+
+/**
+ * Which of GET_DECLARATION's three answers this URL is asking for. Read from the
+ * path rather than held in state, because the URL is already the router.
+ */
+type Section = "declaration" | "scoreboard" | "results";
+
+function sectionFromPath(): Section {
+  if (typeof window === "undefined") return "declaration";
+  const here = window.location.pathname
+    .replace(/^\/en/, "")
+    .replace(/\/$/, "");
+  if (here === "/placar") return "scoreboard";
+  if (here === "/resultados") return "results";
+  return "declaration";
+}
+
+function pathFor(path: string, locale: Locale): string {
+  if (locale !== "en") return path;
+  return path === "/" ? "/en/" : `/en${path}`;
+}
+
+
+/**
+ * Chrome, in both languages.
+ *
+ * The declaration's *content* is translated server-side, where the declaration
+ * lives. These are the words this app adds around it — headings, labels, empty
+ * states — so they are the app's to translate, and leaving them in English made
+ * a Portuguese page read half-translated.
+ *
+ * Read from the URL at render time rather than threaded through every component:
+ * `/en/...` already is the locale, and it is the same source of truth the router
+ * and the worker use.
+ */
+const UI = {
+  declarationTitle: { "pt-BR": "Declaração 2030", en: "Declaration 2030" },
+  aboutMyLife: { "pt-BR": "O que é a minha vida", en: "What my life is about" },
+  metricsEyebrow: {
+    "pt-BR": "Métricas que confirmam o sucesso",
+    en: "Metrics that confirm success",
+  },
+  scorecard: { "pt-BR": "Placar", en: "Scorecard" },
+  gameEyebrow: {
+    "pt-BR": "Que jogo eu estou jogando",
+    en: "What game I am playing",
+  },
+  strategicResults: {
+    "pt-BR": "Resultados estratégicos",
+    en: "Strategic results",
+  },
+  conditionsEyebrow: {
+    "pt-BR": "Independente das circunstâncias",
+    en: "Regardless of circumstances",
+  },
+  conditions: {
+    "pt-BR": "Condições de satisfação",
+    en: "Conditions of satisfaction",
+  },
+  showScores: {
+    "pt-BR": "Mostrar os dois placares e leituras antigas",
+    en: "Show the two scores and older readings",
+  },
+  hideScores: {
+    "pt-BR": "Esconder os dois placares",
+    en: "Hide the two scores",
+  },
+  result: { "pt-BR": "Resultado", en: "Result" },
+  oneProject: { "pt-BR": "1 projeto", en: "1 project" },
+  projects: { "pt-BR": "projetos", en: "projects" },
+  acceptanceCriteria: {
+    "pt-BR": "Critérios de aceitação",
+    en: "Acceptance criteria",
+  },
+  metrics: { "pt-BR": "Métricas", en: "Metrics" },
+  target: { "pt-BR": "meta", en: "target" },
+  portfolio: { "pt-BR": "Portfólio", en: "Portfolio" },
+  projectsCount: { "pt-BR": "projetos", en: "projects" },
+  servesNothing: {
+    "pt-BR": "Não serve nada declarado",
+    en: "Serves nothing declared",
+  },
+  activeGoals: { "pt-BR": "objetivos ativos", en: "active goals" },
+  openItems: { "pt-BR": "itens abertos", en: "open items" },
+  unscored: { "pt-BR": "Sem nota", en: "Unscored" },
+  honestAssessment: {
+    "pt-BR": "Faça uma avaliação honesta",
+    en: "Set an honest assessment",
+  },
+  notMeasured: { "pt-BR": "Ainda não medido", en: "Not yet measured" },
+  currentOutcome: { "pt-BR": "Resultado atual", en: "Current outcome" },
+  outcomeMissing: {
+    "pt-BR": "Resultado não declarado",
+    en: "Outcome not declared",
+  },
+  onwardEyebrow: { "pt-BR": "Por onde seguir", en: "Where to go next" },
+  onwardScoreboard: {
+    "pt-BR": "As métricas que confirmam o sucesso, e as condições que fazem valer a pena.",
+    en: "The metrics that confirm success, and the conditions that make it worth it.",
+  },
+  onwardResults: {
+    "pt-BR": "O que tem que ter acontecido, sob cada compromisso, e quanto já andou.",
+    en: "What has to have happened, under each commitment, and how far along it is.",
+  },
+  onwardProjects: {
+    "pt-BR": "O trabalho de verdade apontado para cada promessa — e onde não há nenhum.",
+    en: "The actual work pointed at each promise — and where there is none.",
+  },
+  metricsCount: { "pt-BR": "métricas", en: "metrics" },
+  resultsCount: { "pt-BR": "resultados", en: "results" },
+  noProject: {
+    "pt-BR": "Nenhum projeto persegue este resultado",
+    en: "No project is pursuing this result",
+  },
+} as const;
+
+function ui(key: keyof typeof UI): string {
+  const locale: Locale =
+    typeof window !== "undefined"
+      ? localeFromPath(window.location.pathname)
+      : "pt-BR";
+  return UI[key][locale];
+}
+
 export function App() {
-  const { connected, loading, toolName, toolResult, error, callTool } =
-    useMcp();
+  const {
+    connected,
+    loading,
+    toolName,
+    toolResult,
+    error,
+    callTool,
+    available,
+    signedIn,
+  } = useMcp();
   const initialized = useRef(false);
   const bookmarksActive = isBookmarkTool(toolName);
+  // Which tab is lit. Kept in state rather than read from `window` at render,
+  // because pushState does not re-render anything on its own.
+  const [here, setHere] = useState(() =>
+    STANDALONE ? window.location.pathname : "/",
+  );
+  const [locale, setLocale] = useState<Locale>(() =>
+    STANDALONE ? localeFromPath(window.location.pathname) : "en",
+  );
+
+  // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
+  const nav = NAV_ITEMS.map((item) => ({
+    ...item,
+    tool: item.tool as string,
+    path: item.path as string,
+  })).filter((item) => !STANDALONE || available.includes(item.tool));
+
+  // A tab is a place, so it gets a URL: shareable, refreshable, and back works.
+  // The worker serves the same bundle on every path, so routing is entirely the
+  // question of which tool to open.
+  const open = (tool: string, path?: string, next: Locale = locale) => {
+    const href = path ? pathFor(path, next) : undefined;
+    if (STANDALONE && href) {
+      if (window.location.pathname !== href) {
+        window.history.pushState({}, "", href);
+      }
+      setHere(href);
+    }
+    if (next !== locale) setLocale(next);
+    document.documentElement.lang = next;
+    void callTool(tool, argsFor(tool, next));
+  };
 
   useEffect(() => {
     if (!connected || initialized.current) return;
+    if (STANDALONE && !nav.length) return;
     initialized.current = true;
     const bootFlag = (window as { __BOOT_TOOL__?: string }).__BOOT_TOOL__;
-    void callTool(bootFlag ?? toolName ?? "GET_DECLARATION");
-  }, [callTool, connected, toolName]);
+    const landed = STANDALONE ? window.location.pathname : "";
+    const routed = STANDALONE
+      ? nav.find((item) => pathFor(item.path, locale) === landed)?.tool
+      : undefined;
+    const boot = bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION";
+    if (STANDALONE) document.documentElement.lang = locale;
+    void callTool(boot, argsFor(boot, locale));
+  }, [callTool, connected, nav, toolName]);
+
+  // Back and forward move between tabs rather than out of the app.
+  useEffect(() => {
+    if (!STANDALONE) return;
+    const onPop = () => {
+      const landed = window.location.pathname;
+      const next = localeFromPath(landed);
+      const item = nav.find((entry) => pathFor(entry.path, next) === landed);
+      setHere(landed);
+      setLocale(next);
+      if (item) void callTool(item.tool, argsFor(item.tool, next));
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [callTool, nav]);
 
   return (
-    <main className={`shell ${bookmarksActive ? "bookmarks-shell" : ""}`}>
+    <main className="shell">
+      {/* The header is full-bleed with its rule spanning the viewport, and only
+          its contents are constrained — same as vibegui.com, where a centered
+          box for everything would put the rule in the wrong place. */}
       <header className="topbar">
-        <p className="os-label">VibeGui OS</p>
-        <span className={`connection ${connected ? "online" : ""}`}>
-          {connected ? "Private Studio" : "Connecting"}
-        </span>
+        <div className="container topbar-inner">
+        <p className="os-label">{declaration.name ?? "vibegui ⋅ Worldview"}</p>
+
+        <nav className="nav" aria-label="Worldview views">
+          {nav.map((item) => (
+            <button
+              type="button"
+              key={item.tool}
+              className={
+                STANDALONE
+                  ? here === pathFor(item.path, locale)
+                    ? "active"
+                    : ""
+                  : toolName === item.tool
+                    ? "active"
+                    : ""
+              }
+              onClick={() => open(item.tool, item.path)}
+            >
+              {item.label[locale]}
+            </button>
+          ))}
+          {STANDALONE && (
+            <a className="nav-away" href={BLOG_HREF}>
+              Blog
+            </a>
+          )}
+        </nav>
+
+        {STANDALONE && (
+          <LanguageSwitch
+            locale={locale}
+            onSwitch={(next) => {
+              const current =
+                nav.find((item) => item.tool === toolName) ?? nav[0];
+              open(current?.tool ?? "GET_DECLARATION", current?.path, next);
+            }}
+          />
+        )}
+
+        {STANDALONE ? (
+          signedIn && (
+            <form method="post" action="/logout">
+              <button type="submit" className="signout">
+                Sign out
+              </button>
+            </form>
+          )
+        ) : (
+          <span className={`connection ${connected ? "online" : ""}`}>
+            {connected ? "Private Studio" : "Connecting"}
+          </span>
+        )}
+        </div>
       </header>
 
-      <nav className="nav" aria-label="Worldview OS views">
-        {NAV_ITEMS.map((item) => (
-          <button
-            type="button"
-            key={item.tool}
-            className={
-              toolName === item.tool ||
-              (item.tool === "LIST_ALL_BOOKMARKS" && bookmarksActive)
-                ? "active"
-                : ""
-            }
-            onClick={() => void callTool(item.tool)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <section className="content" aria-live="polite">
+      {/* The bookmarks workspace is a table and wants more room than a reading
+          column. Widening the content container is the whole of it — widening
+          the shell moved the header and every other view with it. */}
+      <section
+        className={`container content ${bookmarksActive ? "wide" : ""}`}
+        aria-live="polite"
+      >
         <ResultView
           toolName={toolName}
           result={asRecord(toolResult)}
           callTool={callTool}
+          navigate={open}
           loading={loading}
           error={error}
+          available={available}
         />
       </section>
     </main>
+  );
+}
+
+/**
+ * PT / EN, exactly as the site presents it.
+ *
+ * Switching keeps you on the view you were reading rather than sending you home,
+ * which is the one thing vibegui.com's own switch does not do.
+ */
+function LanguageSwitch({
+  locale,
+  onSwitch,
+}: {
+  locale: Locale;
+  onSwitch: (next: Locale) => void;
+}) {
+  return (
+    <p className="language-switch">
+      {(["pt-BR", "en"] as const).map((option, index) => (
+        <span key={option}>
+          {index > 0 && <span aria-hidden="true"> / </span>}
+          <button
+            type="button"
+            className={option === locale ? "is-active" : ""}
+            aria-current={option === locale ? "true" : undefined}
+            onClick={() => onSwitch(option)}
+          >
+            {option === "en" ? "EN" : "PT"}
+          </button>
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -71,19 +415,25 @@ function ResultView({
   toolName,
   result,
   callTool,
+  navigate,
   loading,
   error,
+  available,
 }: {
   toolName?: string;
   result: JsonRecord;
   callTool: <T>(name: string, args?: Record<string, unknown>) => Promise<T>;
+  /** Same function the tabs use, so a card and a tab are the same act. */
+  navigate: (tool: string, path?: string) => void;
   loading: boolean;
   error?: string;
+  available: string[];
 }) {
   if (isBookmarkTool(toolName) || Array.isArray(result.bookmarks)) {
     return (
       <BookmarksView
         activeTool={toolName}
+        available={available}
         result={result}
         loading={loading}
         error={error}
@@ -100,7 +450,9 @@ function ResultView({
     return (
       <PortfolioView
         result={result}
-        openProject={(id) => void callTool("GET_PROJECT", { id })}
+        openProject={(id) =>
+          void callTool("GET_PROJECT", { id, locale: localeFromPath(window.location.pathname) })
+        }
         prepareBrief={() => void callTool("GET_DAILY_BRIEF_INPUT")}
       />
     );
@@ -135,25 +487,20 @@ function ResultView({
   }
   if (
     toolName === "GET_DECLARATION" ||
-    "what_my_life_is_about" in result ||
-    "markdown" in result
+    "what_my_life_is_about" in result
   ) {
-    // GET_DECLARATION answers three questions; the long-form charter markdown
-    // still comes from DECLARATION.md in git, nested under the first one.
     const about = asNullableRecord(result.what_my_life_is_about);
     const game = asNullableRecord(result.what_game_i_am_playing);
-    const longForm = asNullableRecord(about?.long_form);
-    const scores = asNullableRecord(result.am_i_playing_it_well);
     return (
       <DeclarationView
         declaredFuture={text(about?.declared_future)}
-        markdown={text(longForm?.markdown ?? result.markdown)}
-        source={text(longForm?.source ?? result.source)}
+        conditions={asStrings(game?.conditions_of_satisfaction)}
         strategicResults={asRecords(
           game?.strategic_results ?? result.strategic_results,
         )}
-        scores={scores}
-        diagnostics={asRecords(result.diagnostics ?? result.scorecard)}
+        scorecard={asRecords(result.scorecard)}
+        only={sectionFromPath()}
+        navigate={navigate}
       />
     );
   }
@@ -161,6 +508,19 @@ function ResultView({
     return <Empty message="Choose a view to begin." />;
   }
   return <JsonFallback value={result} />;
+}
+
+function longDate(value: unknown): string {
+  const raw = text(value);
+  if (!raw) return "";
+  const parsed = new Date(raw.length <= 10 ? `${raw}T12:00:00Z` : raw);
+  return Number.isNaN(parsed.valueOf())
+    ? raw
+    : parsed.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 }
 
 function PortfolioView({
@@ -173,59 +533,185 @@ function PortfolioView({
   prepareBrief: () => void;
 }) {
   const projects = asRecords(result.projects);
-  const dailyBrief = asNullableRecord(result.daily_brief);
+  const unfiled = asRecords(result.unfiled);
+  // The brief is working notes, so the public payload omits the key entirely.
+  // Its empty state still says "prepare the current evidence", which is an
+  // instruction to an owner who is not here.
+  const operational = "daily_brief" in result;
+  const orphans = projects.filter(
+    (project) => !COMMITMENTS.some(({ id }) => text(project.commitment) === id),
+  );
 
   return (
     <>
-      <DailyBriefHomeCard brief={dailyBrief} prepare={prepareBrief} />
+      {operational && (
+        <DailyBriefHomeCard
+          brief={asNullableRecord(result.daily_brief)}
+          prepare={prepareBrief}
+        />
+      )}
+
+      {/* Captures that belong to no project yet. Everything else is reachable
+          through the project it is filed under; this is the only home these
+          have, and an inbox nobody sees is an inbox nobody empties. */}
+      {unfiled.length > 0 && (
+        <section className="unfiled">
+          <p className="eyebrow">
+            Unfiled · {unfiled.length}
+          </p>
+          <ul>
+            {unfiled.map((capture) => (
+              <li key={text(capture.id)}>
+                <span className="unfiled-kind">{text(capture.kind)}</span>
+                {text(capture.content)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Portfolio</p>
-          <h2>{projects.length} projects</h2>
+          <p className="eyebrow">{ui("portfolio")}</p>
+          <h2>
+            {projects.length} {ui("projectsCount")}
+          </h2>
         </div>
       </div>
 
       {projects.length === 0 ? (
-        <Empty message="Your map is empty. Ask the agent to add your first project." />
+        <Empty
+          message={
+            operational
+              ? "Your map is empty. Ask the agent to add your first project."
+              : "Nothing here is public yet."
+          }
+        />
       ) : (
-        <div className="project-list">
-          {projects.map((project) => (
-            <button
-              type="button"
-              className="project-card"
-              key={text(project.id)}
-              onClick={() => openProject(text(project.id))}
-            >
-              <div className="project-identity">
-                <div className="project-title">
-                  <span className={`lifecycle ${text(project.lifecycle)}`}>
-                    {text(project.lifecycle)}
+        /* Grouped by the commitment each project's primary result serves, so
+           the map answers "what am I doing about this promise" rather than
+           listing everything and leaving the reader to sort it out. */
+        <div className="portfolio-groups">
+          {COMMITMENTS.map((commitment, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const mine = projects.filter(
+              (project) => text(project.commitment) === commitment.id,
+            );
+            if (!mine.length) return null;
+            return (
+              <section
+                className="portfolio-group"
+                key={commitment.id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
                   </span>
-                  <h3>{text(project.name)}</h3>
+                  {commitment.label}
+                </h3>
+                <div className="project-list">
+                  {mine.map((project) => (
+                    <ProjectCard
+                      key={text(project.id)}
+                      project={project}
+                      operational={operational}
+                      openProject={openProject}
+                    />
+                  ))}
                 </div>
-                <p className="spirit">
-                  {text(project.spirit) || text(project.description)}
-                </p>
-                <footer>
-                  <span>{number(project.active_goal_count)} active goals</span>
-                  <span>{number(project.open_work_item_count)} open items</span>
-                  <span>{relativeTime(project.last_activity_at)}</span>
-                </footer>
+              </section>
+            );
+          })}
+          {/* A project whose primary result names no commitment would be filed
+              nowhere and vanish from its own map. */}
+          {orphans.length > 0 && (
+            <section className="portfolio-group">
+              <h3>{ui("servesNothing")}</h3>
+              <div className="project-list">
+                {orphans.map((project) => (
+                  <ProjectCard
+                    key={text(project.id)}
+                    project={project}
+                    operational={operational}
+                    openProject={openProject}
+                  />
+                ))}
               </div>
-              <div className="project-outcome">
-                <span className="project-label">Current outcome</span>
-                <p>{text(project.current_outcome) || "Outcome not declared"}</p>
-              </div>
-              <ProjectProgress project={project} />
-              <span className="project-arrow" aria-hidden="true">
-                →
-              </span>
-            </button>
-          ))}
+            </section>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+/** One project, in the map. Two groups render it, so it is its own component. */
+function ProjectCard({
+  project,
+  operational,
+  openProject,
+}: {
+  project: JsonRecord;
+  operational: boolean;
+  openProject: (id: string) => void;
+}) {
+  return (
+    // GET_PROJECT is private, so publicly a card is a card, not a link into a
+    // detail view that would answer with "Unknown tool".
+    <button
+      type="button"
+      className={`project-card ${operational ? "" : "static"}`}
+      disabled={!operational}
+      onClick={operational ? () => openProject(text(project.id)) : undefined}
+    >
+      <div className="project-identity">
+        <div className="project-title">
+          <span className={`lifecycle ${text(project.lifecycle)}`}>
+            {text(project.lifecycle)}
+          </span>
+          <h3>{text(project.name)}</h3>
+        </div>
+        {/* The declared results this project pursues. Saying so when there are
+            none is the point — that project is why alignment is not 100%. */}
+        <p
+          className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
+        >
+          {/* No "Serves ·" prefix. The card already sits under the commitment
+              it serves, and the label was repeating on every line what the group
+              heading says once. */}
+          {asStrings(project.serves).length
+            ? asStrings(project.serves)
+                .map((id) => resultTitles[id] ?? id)
+                .join(" · ")
+            : ui("servesNothing")}
+        </p>
+        <p className="spirit">
+          {text(project.spirit) || text(project.description)}
+        </p>
+        {operational && (
+          <footer>
+            <span>
+              {number(project.active_goal_count)} {ui("activeGoals")}
+            </span>
+            <span>
+              {number(project.open_work_item_count)} {ui("openItems")}
+            </span>
+            <span>{relativeTime(project.last_activity_at)}</span>
+          </footer>
+        )}
+      </div>
+      <div className="project-outcome">
+        <span className="project-label">{ui("currentOutcome")}</span>
+        <p>{text(project.current_outcome) || ui("outcomeMissing")}</p>
+      </div>
+      <ProjectProgress project={project} />
+      <span className="project-arrow" aria-hidden="true">
+        →
+      </span>
+    </button>
   );
 }
 
@@ -272,7 +758,7 @@ function ProjectProgress({ project }: { project: JsonRecord }) {
     <div className="project-progress">
       <div className="progress-heading">
         <span className="project-label">Progress</span>
-        <strong>{assessed ? `${progress}%` : "Unscored"}</strong>
+        <strong>{assessed ? `${progress}%` : ui("unscored")}</strong>
       </div>
       <div
         className="progress-track"
@@ -284,7 +770,7 @@ function ProjectProgress({ project }: { project: JsonRecord }) {
       >
         <span style={{ width: `${progress}%` }} />
       </div>
-      <p>{text(project.progress_note) || "Set an honest assessment"}</p>
+      <p>{text(project.progress_note) || ui("honestAssessment")}</p>
     </div>
   );
 }
@@ -1025,180 +1511,315 @@ function BriefInputView({ result }: { result: JsonRecord }) {
 
 function DeclarationView({
   declaredFuture,
-  markdown,
-  source,
+  conditions,
   strategicResults,
-  scores,
-  diagnostics,
+  scorecard,
+  only,
+  navigate,
 }: {
   declaredFuture: string;
-  markdown: string;
-  source: string;
+  conditions: string[];
   strategicResults: JsonRecord[];
-  scores: JsonRecord | null;
-  diagnostics: JsonRecord[];
+  scorecard: JsonRecord[];
+  /** Which of the three answers to render. All live behind GET_DECLARATION. */
+  only: Section;
+  navigate: (tool: string, path?: string) => void;
 }) {
-  const [charterExpanded, setCharterExpanded] = useState(false);
-  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
-  if (!declaredFuture && !markdown) {
+  // Which commitments are lit. Empty is the resting state and shows all three;
+  // selecting is a filter on the orb, not a claim about the declaration.
+  const [lit, setLit] = useState<number[]>([]);
+  if (!declaredFuture && !conditions.length) {
     return <Empty message="The declaration could not be loaded." />;
   }
-  const charter = extractDeclarationSection(
-    markdown,
-    "## Charter",
-    "## Strategic Outcomes",
-  );
-  const conditions = extractDeclarationSection(
-    markdown,
-    "## Conditions of Satisfaction",
-    "## December 2026 Scorecard",
-  );
-  // The declared future in worldview.json is authoritative; the long-form
-  // charter in DECLARATION.md is the expandable detail behind it.
-  const statement =
-    declaredFuture ||
-    charter.paragraphs[0] ||
-    "VibeGui is my Worldview OS.";
-  const alignment = asNullableRecord(scores?.alignment);
-  const integrity = asNullableRecord(scores?.integrity);
+  // worldview.json is the whole declaration. There used to be a second one
+  // fetched from the blog's DECLARATION.md and shown behind "Read the full
+  // charter" — a product charter from an older cycle, quietly contradicting the
+  // one above it.
+  // One paragraph per commitment, in order: the button is the heading and the
+  // paragraph is what it opens. Anything past the third has no switch to sit
+  // under, so it stays below as plain prose rather than being dropped.
+  const paragraphs = declaredFuture.split("\n\n").filter(Boolean);
+  const commitments = declaration.commitments ?? [];
+  // Every paragraph is always in the document. Revealing toggles opacity, never
+  // mounting, so the block reserves its full height from the first paint and
+  // nothing below it ever moves — a declaration that shoves the page around as
+  // you read it is worse than one that shows everything.
+  const statements = paragraphs.map((text, index) => {
+    const ink = STRAND_INKS[index % STRAND_INKS.length];
+    return {
+      text,
+      index,
+      ink: ink ? `${ink.r} ${ink.g} ${ink.b}` : undefined,
+      // Past the last commitment there is no switch to reveal it, so it stays
+      // visible rather than being unreachable.
+      shown: index >= commitments.length || lit.includes(index),
+    };
+  });
 
   return (
     <article className="declaration">
-      <section className="charter-card">
-        <p className="eyebrow">What my life is about</p>
-        {statement.split("\n\n").map((paragraph) => (
-          <p className="charter-statement" key={paragraph.slice(0, 40)}>
-            {cleanMarkdown(paragraph)}
-          </p>
-        ))}
-        {charter.bullets.length > 0 && (
-          <>
-            <button
-              type="button"
-              className="charter-toggle"
-              aria-expanded={charterExpanded}
-              onClick={() => setCharterExpanded((expanded) => !expanded)}
+      {/* The opening spread. Type on the left, the orb on the right, and the
+          three commitments under the name where a standfirst would go — they are
+          the part a reader should be able to repeat back. Asymmetric, because a
+          cover leans. */}
+      {only === "declaration" && (
+      <header className="masthead">
+        <div className="masthead-type">
+          {/* The name reads first: whose declaration this is, then what it is.
+              A masthead that names the document before its author has it the
+              wrong way round for something signed. */}
+          <h1>
+            <span className="masthead-author">
+              {declaration.author ?? "Guilherme Rodrigues"}
+            </span>
+            <span>{ui("declarationTitle")}</span>
+          </h1>
+          {commitments.length > 0 && (
+            <ol className="commitments">
+              {commitments.map(({ id, label: commitment }, index) => {
+                const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+                const on = lit.includes(index);
+                return (
+                  <li
+                    key={id}
+                    style={
+                      { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={`commitment ${on ? "is-lit" : ""}`}
+                      aria-expanded={on}
+                      onClick={() =>
+                        setLit((current) =>
+                          current.includes(index)
+                            ? current.filter((item) => item !== index)
+                            : [...current, index],
+                        )
+                      }
+                    >
+                      <span className="commitment-index" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <span className="commitment-label">{commitment}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+        <div className="masthead-orb">
+          <ThinkingOrb size={360} active={lit} />
+        </div>
+      </header>
+      )}
+
+      {/* The declaration reads in its own place, under the spread. Selecting a
+          commitment reveals the paragraph that belongs to it, in declared order
+          rather than in the order they were clicked — the text is a document,
+          not a log of what the reader touched. */}
+      {only === "declaration" && statements.length > 0 && (
+        <section className="charter-card">
+          {statements.map(({ text: paragraph, ink, shown }) => (
+            <p
+              className={`charter-statement ${shown ? "is-shown" : ""}`}
+              key={paragraph.slice(0, 40)}
+              aria-hidden={!shown}
+              style={ink ? ({ "--ink": ink } as React.CSSProperties) : undefined}
             >
-              {charterExpanded
-                ? "Hide the full charter"
-                : "Read the full charter"}
-              <span aria-hidden="true">{charterExpanded ? "↑" : "↓"}</span>
-            </button>
-            {charterExpanded && (
-              <ul className="charter-details">
-                {charter.bullets.map((item) => (
-                  <li key={item}>{cleanMarkdown(item)}</li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </section>
-
-      <section className="declaration-block">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Two scores, no others</p>
-            <h2>Am I playing it well?</h2>
-          </div>
-        </div>
-        <div className="scorecard-grid">
-          {alignment && <ScoreCard score={alignment} />}
-          {integrity && <ScoreCard score={integrity} />}
-        </div>
-      </section>
-
-      <section className="declaration-block">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">What game I am playing</p>
-            <h2>Strategic results</h2>
-          </div>
-        </div>
-        <div className="strategic-results">
-          {strategicResults.map((result) => (
-            <StrategicResultCard key={text(result.id)} result={result} />
+              {cleanMarkdown(paragraph)}
+            </p>
           ))}
+        </section>
+      )}
+
+      {/* The scorecard, not the scores. A number with a target next to it is
+          something to act on this week; the two scores are a summary of these
+          and are being reconsidered, so they sit with the diagnostics until
+          they earn the headline back. */}
+      {only === "scoreboard" && (
+      <section className="declaration-block scores-block">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{ui("metricsEyebrow")}</p>
+            <h2>{ui("scorecard")}</h2>
+          </div>
+        </div>
+        {/* One column per commitment, equal width, with each strategic result
+            heading the metrics that measure it. Grouped rather than listed
+            because seventeen numbers in a flat grid say nothing about which
+            promise they belong to. */}
+        <div className="scoreboard">
+          {commitments.map(({ id, label }, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const byResult = scorecard
+              .filter((metric) => text(metric.commitment) === id)
+              .reduce<Map<string, JsonRecord[]>>((groups, metric) => {
+                const key = text(metric.result_title);
+                groups.set(key, [...(groups.get(key) ?? []), metric]);
+                return groups;
+              }, new Map());
+            return (
+              <section
+                className="scoreboard-column"
+                key={id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {label}
+                </h3>
+                {[...byResult].map(([resultTitle, metrics]) => (
+                  <div className="scoreboard-result" key={resultTitle}>
+                    <p className="scoreboard-result-title">{resultTitle}</p>
+                    <ul className="scoreboard-metrics">
+                      {metrics.map((metric) => (
+                        <MetricRow key={text(metric.id)} metric={metric} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
+        </div>
+      </section>
+      )}
+
+      {/* Where to go next. The declaration answers "what is this about"; these
+          three answer "and then what", each with the count of what is actually
+          in there so the invitation is specific rather than decorative.
+          Clicking one is the same act as clicking its tab — same function. */}
+      {only === "declaration" && (
+        <nav className="onward" aria-label={ui("onwardEyebrow")}>
+          {[
+            {
+              path: "/placar",
+              label: ui("scorecard"),
+              blurb: ui("onwardScoreboard"),
+              count: scorecard.length,
+              unit: ui("metricsCount"),
+              index: 0,
+            },
+            {
+              path: "/resultados",
+              label: ui("strategicResults"),
+              blurb: ui("onwardResults"),
+              count: strategicResults.length,
+              unit: ui("resultsCount"),
+              index: 1,
+            },
+            {
+              path: "/projects",
+              label: ui("portfolio"),
+              blurb: ui("onwardProjects"),
+              count: new Set(
+                strategicResults.flatMap((result) =>
+                  asRecords(result.projects).map((project) => text(project.id)),
+                ),
+              ).size,
+              unit: ui("projectsCount"),
+              index: 2,
+            },
+          ].map((card) => {
+            const ink = STRAND_INKS[card.index % STRAND_INKS.length]!;
+            return (
+              <button
+                type="button"
+                className="onward-card"
+                key={card.path}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+                onClick={() =>
+                  navigate(
+                    card.path === "/projects"
+                      ? "GET_PORTFOLIO"
+                      : "GET_DECLARATION",
+                    card.path,
+                  )
+                }
+              >
+                <span className="onward-count">
+                  {card.count}
+                  <small>{card.unit}</small>
+                </span>
+                <span className="onward-label">{card.label}</span>
+                <span className="onward-blurb">{card.blurb}</span>
+                <span className="onward-go" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {only === "results" && (
+      <>
+      {/* Results live under the commitment they serve, and the work that
+          pursues each one sits inside it. Nine flat cards said nothing about
+          which promise anything belonged to; three groups of three say it
+          without a word of explanation. */}
+      <section className="declaration-block">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{ui("gameEyebrow")}</p>
+            <h2>{ui("strategicResults")}</h2>
+          </div>
+        </div>
+        <div className="result-groups">
+          {commitments.map(({ id, label }, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const mine = strategicResults.filter(
+              (result) => text(result.commitment) === id,
+            );
+            if (!mine.length) return null;
+            return (
+              <section
+                className="result-group"
+                key={id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {label}
+                </h3>
+                {mine.map((result) => (
+                  <StrategicResultCard key={text(result.id)} result={result} />
+                ))}
+              </section>
+            );
+          })}
         </div>
       </section>
 
+      </>
+      )}
+
+      {only === "scoreboard" && (
       <section className="declaration-block conditions">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Regardless of circumstances</p>
-            <h2>Conditions of satisfaction</h2>
+            <p className="eyebrow">{ui("conditionsEyebrow")}</p>
+            <h2>{ui("conditions")}</h2>
           </div>
         </div>
         <ul>
-          {conditions.bullets.map((item) => (
+          {conditions.map((item) => (
             <li key={item}>{cleanMarkdown(item)}</li>
           ))}
         </ul>
       </section>
-
-      {diagnostics.length > 0 && (
-        <section className="declaration-block">
-          <button
-            type="button"
-            className="charter-toggle"
-            aria-expanded={diagnosticsExpanded}
-            onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
-          >
-            {diagnosticsExpanded ? "Hide diagnostics" : "Show diagnostics"}
-            <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
-          </button>
-          {diagnosticsExpanded && (
-            <div className="scorecard-grid">
-              {diagnostics.map((item) => (
-                <ScorecardItem key={text(item.id)} item={item} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {source && (
-        <footer>
-          <a href={source} target="_blank" rel="noopener noreferrer">
-            View canonical declaration on GitHub ↗
-          </a>
-        </footer>
-      )}
-    </article>
-  );
-}
-
-/**
- * Integrity deliberately gets no progress bar: it counts unacknowledged
- * commitments toward zero, and a percentage on it would be a category error.
- */
-function ScoreCard({ score }: { score: JsonRecord }) {
-  const countToZero = text(score.kind) === "count-to-zero";
-  const raw = score.current_value;
-  const measured = raw !== null && raw !== undefined;
-  const domains = asNullableRecord(score.domains);
-
-  return (
-    <article className="scorecard-item">
-      <p>{text(score.label)}</p>
-      {measured ? (
-        <strong className={countToZero && number(raw) > 0 ? "not-yet" : "yes"}>
-          {number(raw)}
-          {!countToZero && <span> / 100</span>}
-        </strong>
-      ) : (
-        <strong className="not-yet">Not yet measured</strong>
-      )}
-      <small>{text(score.question)}</small>
-      <small>{text(score.measure)}</small>
-      {domains && (
-        <ul className="charter-details">
-          {["word", "systems", "objects"].map((key) => (
-            <li key={key}>
-              <strong>{key}</strong> — {text(domains[key])}
-            </li>
-          ))}
-        </ul>
       )}
     </article>
   );
@@ -1207,107 +1828,91 @@ function ScoreCard({ score }: { score: JsonRecord }) {
 function StrategicResultCard({ result }: { result: JsonRecord }) {
   const progress = Math.min(100, Math.max(0, number(result.progress_percent)));
   const criteria = asStrings(result.acceptance_criteria);
-  const metrics = asRecords(result.metrics);
+  const projects = asRecords(result.projects);
 
   return (
     <article className="strategic-result">
       <header>
-        <div>
-          <p className="eyebrow">
-            Result {String(number(result.position)).padStart(2, "0")}
-          </p>
-          <h3>{text(result.title)}</h3>
-        </div>
+        <h4>{text(result.title)}</h4>
         <strong className="result-progress">{progress}%</strong>
       </header>
-      <p className="result-narrative">{text(result.narrative)}</p>
       <div className="result-progress-track">
         <span style={{ width: `${progress}%` }} />
       </div>
-      <p className="result-progress-note">{text(result.progress_note)}</p>
-      <div className="result-details">
-        <div>
-          <p className="project-label">Acceptance criteria</p>
-          <ul>
-            {criteria.map((criterion) => (
-              <li key={criterion}>{criterion}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="project-label">Metrics</p>
-          <div className="result-metrics">
-            {metrics.map((metric) => (
-              <div key={text(metric.label)}>
-                <strong>
-                  {number(metric.current)} / {number(metric.target)}
-                </strong>
-                <span>
-                  {text(metric.label)} · {text(metric.unit)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <p className="result-narrative">{text(result.narrative)}</p>
+
+      {/* The work actually pointed here. A result with none is the gap this
+          whole system exists to show, so the absence is stated rather than left
+          as an empty space someone has to notice. */}
+      {projects.length > 0 ? (
+        <ul className="result-projects">
+          {projects.map((project) => (
+            <li
+              className={`result-project ${text(project.lifecycle)}`}
+              key={text(project.id)}
+            >
+              <span>{text(project.name)}</span>
+              {text(project.lifecycle) !== "active" && (
+                <small>{text(project.lifecycle)}</small>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="result-projects-empty">{ui("noProject")}</p>
+      )}
+
+      {criteria.length > 0 && (
+        <ul className="result-criteria">
+          {criteria.map((criterion) => (
+            <li key={criterion}>{criterion}</li>
+          ))}
+        </ul>
+      )}
     </article>
   );
 }
 
-function ScorecardItem({ item }: { item: JsonRecord }) {
-  const isBoolean = text(item.kind) === "boolean";
-  const current = number(item.current_value);
-  const target = number(item.target_value);
+/**
+ * One declared metric, read: a name, a reading, and the target it is measured
+ * against.
+ *
+ * `current === null` renders as unmeasured rather than 0, because those are
+ * different claims: one says nobody has looked, the other says someone looked
+ * and found nothing. Only the second is evidence.
+ *
+ * A row, not a card. A number and its target is one line, and a box around one
+ * line is a box around nothing.
+ */
+function MetricRow({ metric }: { metric: JsonRecord }) {
+  const target = number(metric.target);
+  const measured = metric.current !== null && metric.current !== undefined;
+  const current = number(metric.current);
+  // A target of zero is a floor to hold, not a bar to fill — incidents, or
+  // unacknowledged commitments. Meeting it is the whole achievement.
+  const holdAtZero = target === 0;
   const ratio =
-    !isBoolean && target > 0
+    measured && target > 0
       ? Math.min(100, Math.max(0, (current / target) * 100))
       : 0;
-  const yes = number(item.boolean_value) === 1;
 
   return (
-    <article className={`scorecard-item ${isBoolean ? "boolean" : ""}`}>
-      <p>{text(item.label)}</p>
-      {isBoolean ? (
-        <strong className={yes ? "yes" : "not-yet"}>
-          {yes ? "Yes" : "Not yet"}
-        </strong>
-      ) : (
-        <>
-          <strong>
-            {current} <span>/ {target}</span>
-          </strong>
-          <div className="scorecard-track">
-            <span style={{ width: `${ratio}%` }} />
-          </div>
-          <small>{text(item.unit)}</small>
-        </>
-      )}
-      {text(item.note) && <small>{text(item.note)}</small>}
-    </article>
+    <li className="metric-row">
+      <span className="metric-name">
+        {text(metric.label)}
+        <small>{text(metric.unit)}</small>
+      </span>
+      <span className={`metric-reading ${measured ? "" : "is-unmeasured"}`}>
+        {measured ? current : "\u2014"}
+        <span className="metric-target">
+          {holdAtZero ? " \u2264 0" : ` / ${target}`}
+        </span>
+      </span>
+      <span className="metric-track" aria-hidden="true">
+        <span style={{ width: `${ratio}%` }} />
+      </span>
+    </li>
   );
-}
-
-function extractDeclarationSection(
-  markdown: string,
-  startHeading: string,
-  endHeading: string,
-): { paragraphs: string[]; bullets: string[] } {
-  const start = markdown.indexOf(startHeading);
-  const end = markdown.indexOf(endHeading, start + startHeading.length);
-  if (start < 0) return { paragraphs: [], bullets: [] };
-  const body = markdown.slice(
-    start + startHeading.length,
-    end < 0 ? undefined : end,
-  );
-  const paragraphs: string[] = [];
-  const bullets: string[] = [];
-  for (const sourceLine of body.split("\n")) {
-    const line = sourceLine.trim();
-    if (!line) continue;
-    if (line.startsWith("- ")) bullets.push(line.slice(2));
-    else if (!line.startsWith("#")) paragraphs.push(line);
-  }
-  return { paragraphs, bullets };
 }
 
 function cleanMarkdown(value: string): string {

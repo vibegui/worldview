@@ -1,38 +1,39 @@
 :root {
-  --serie-vibegui: #3e8558;
-  --serie-irene: #4573c4;
-  --serie-malvados: #c2502f;
-  --serie-outros: #8a5fc8;
-  color-scheme: light dark;
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  /* The palette is vibegui.com's, value for value (src/styles/main.css), so the
+     public face and the blog are one design rather than two that resemble each
+     other. Each still falls back to the MCP host's variable first, because
+     inside deco studio the host owns the theme. */
+  --serie-1: #42a065;
+  --serie-2: #5d86de;
+  --serie-3: #e06a45;
+  --serie-outros: #a878e0;
+  color-scheme: dark;
+
+  --content-width: 48rem;
+  /* Paired on a contrast axis: a grotesque with a width axis to set headlines
+     tight and wide like concrete poetry, and a serif drawn for screen reading to
+     carry the prose. Neither is the reflex pick, and the reflex pick — a display
+     serif over a geometric sans — is the look this page just left. */
+  --font-sans: Archivo, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Literata, Georgia, "Times New Roman", serif;
+
+  font-family: var(--font-sans);
   font-synthesis: none;
-  --bg: var(--color-background-primary, #f7f6f2);
-  --surface: var(--color-background-secondary, #efede7);
-  --surface-raised: color-mix(in srgb, var(--surface) 65%, var(--bg));
-  --text: var(--color-text-primary, #191816);
-  --muted: var(--color-text-secondary, #716d66);
-  --border: var(--color-border-primary, #dedbd2);
-  --accent: #3f674f;
+
+  --bg: var(--color-background-primary, #121310);
+  --surface: var(--color-background-secondary, #1b1d18);
+  --surface-raised: color-mix(in srgb, var(--surface) 82%, white 2%);
+  --text: var(--color-text-primary, #eeede7);
+  --muted: var(--color-text-secondary, #a29f96);
+  --border: var(--color-border-primary, #2b2e27);
+  --accent: oklch(0.79 0.17 152);
+  --accent-hover: oklch(0.86 0.14 152);
+  --orb-ink: 96 236 150;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   background: var(--bg);
   color: var(--text);
 }
 
-[data-theme="dark"] {
-  --bg: var(--color-background-primary, #111310);
-  --surface: var(--color-background-secondary, #1c201b);
-  --surface-raised: color-mix(in srgb, var(--surface) 82%, white 2%);
-  --text: var(--color-text-primary, #f1f0ea);
-  --muted: var(--color-text-secondary, #9e9d95);
-  --border: var(--color-border-primary, #2c312a);
-  --serie-vibegui: #42a065;
-  --serie-irene: #5d86de;
-  --serie-malvados: #e06a45;
-  --serie-outros: #a878e0;
-  --accent: #9eb89c;
-  --accent-soft: color-mix(in srgb, var(--accent) 11%, transparent);
-}
 
 * {
   box-sizing: border-box;
@@ -42,11 +43,14 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(
-      circle at 50% -10%,
-      var(--accent-soft),
-      transparent 38rem
-    ), var(--bg);
+  background:
+    radial-gradient(
+        130% 90% at 50% 0%,
+        color-mix(in srgb, var(--accent) 11%, transparent),
+        transparent 58%
+      )
+      fixed,
+    var(--bg);
   color: var(--text);
 }
 
@@ -62,24 +66,72 @@ button {
 }
 
 .shell {
-  width: min(100%, 920px);
-  margin: 0 auto;
-  padding: 28px;
+  width: 100%;
 }
 
+/* vibegui.com's layout, value for value: a 1024px container, and inside it a
+   48rem reading column that is left-aligned rather than centred. The asymmetry
+   is the look — centring the column moves every line 100px right. */
+.container {
+  width: 100%;
+  max-width: 1024px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-inline: 1.5rem;
+  }
+}
+
+.content {
+  padding-bottom: 4rem;
+}
+
+/* Wider than the reading column, still centred and still padded. */
+.content.wide {
+  max-width: 1180px;
+}
+
+.content.wide > * {
+  max-width: none;
+}
+
+.content > *,
+.section-heading {
+  max-width: var(--content-width, 48rem);
+}
+
+/* One row: name, views, sign out. The nav used to sit on its own line under the
+   name, which spent a whole band of vertical space on a word and a button. */
 .topbar {
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
-  margin-bottom: 18px;
+  min-height: 64px;
+}
+
+/* The nav takes the slack so the sign out button stays pinned right. min-width
+   lets it shrink and scroll instead of shoving the button off screen. */
+.topbar-inner .nav {
+  min-width: 0;
+  margin-bottom: 0;
+  margin-left: auto;
+  border-bottom: 0;
+  gap: 4px;
 }
 
 .section-heading h2,
 .hero-card h2,
 .brief h2 {
   margin: 3px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-weight: 500;
   letter-spacing: -0.025em;
 }
@@ -95,11 +147,14 @@ button {
 
 .os-label {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 28px;
+  white-space: nowrap;
 }
 
 .connection {
@@ -127,6 +182,26 @@ button {
   box-shadow: 0 0 0 3px color-mix(in srgb, #79a17c 18%, transparent);
 }
 
+/* Standalone only. A button needs its own reset: without one the user agent
+   supplies a background and a font, which is what made this unreadable. */
+.signout {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.signout:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
 .empty button {
   padding: 10px 15px;
   border: 0;
@@ -151,7 +226,9 @@ button {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -174,6 +251,58 @@ button {
   min-height: 260px;
 }
 
+.scorecard-item small.score-note {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+
+.serves {
+  margin: 6px 0 0;
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+}
+
+/* Not an error state — a project serving nothing declared is a real answer, and
+   the reason alignment is below 100. Muted, not red. */
+.serves.none {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.unfiled {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.unfiled ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unfiled li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.unfiled-kind {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .daily-brief-card {
   margin-bottom: 34px;
   padding: clamp(24px, 5vw, 38px);
@@ -192,7 +321,7 @@ button {
 
 .daily-brief-card h2 {
   margin: 4px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1.55rem;
   font-weight: 500;
 }
@@ -222,7 +351,7 @@ button {
 .daily-brief-copy {
   display: -webkit-box;
   overflow: hidden;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 0.98rem;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 6;
@@ -323,7 +452,7 @@ button {
 
 .project-outcome p {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1rem;
   line-height: 1.45;
 }
@@ -491,7 +620,7 @@ button {
   padding-left: 12px;
   border-left: 2px solid var(--accent);
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
 }
 
 .list-card small {
@@ -520,7 +649,7 @@ button {
 }
 
 .current-state-grid strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 0.95rem;
   font-weight: 500;
   line-height: 1.45;
@@ -568,26 +697,81 @@ button {
   margin-top: 34px;
 }
 
-.declaration {
+/* The declaration and the map both lay out in columns, so they take the whole
+   container rather than the 48rem reading measure. Anything that is prose keeps
+   the measure; anything that is a grid of cards does not. */
+.declaration,
+.portfolio-groups,
+.project-list,
+.daily-brief-card,
+.unfiled {
   width: 100%;
   max-width: none;
 }
 
+/* The first screen answers two of the three questions at once. Left column is
+   the declared future, right column is the two scores — they are a pair, and
+   stacking them put every number in the system below the fold. */
+.declaration-hero {
+  display: grid;
+  align-items: start;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.declaration-hero .charter-card {
+  padding: 22px;
+}
+
+/* Already at the top of the page, so it does not need the 48px that separates
+   the sections below it. */
+.declaration-hero .scores-block {
+  margin-top: 0;
+}
+
+/* Half width means the two scores stack rather than sit side by side. */
+.declaration-hero .scores-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 860px) {
+  .declaration-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .declaration-hero .charter-card {
+    max-height: none;
+  }
+}
+
 .charter-card {
-  padding: clamp(24px, 5vw, 36px);
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--accent-soft), transparent 68%),
-    var(--surface-raised);
+  padding: 0 0 clamp(2rem, 5vh, 3rem);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
 }
 
 .declaration .charter-statement {
   max-width: 760px;
   margin: 14px 0 22px;
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: clamp(1.25rem, 3vw, 1.65rem);
   font-weight: 500;
+  line-height: 1.45;
+}
+
+/* Half a column of prose, so it reads as a paragraph rather than a poster. */
+.declaration-hero .charter-statement {
+  margin: 10px 0 14px;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+/* The three integrity domains are definitions, not body copy. At full size they
+   made the score card taller than the charter beside it. */
+.declaration-hero .score-card .charter-details li {
+  font-size: 0.78rem;
   line-height: 1.45;
 }
 
@@ -664,14 +848,14 @@ button {
 
 .strategic-result h3 {
   margin: 6px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1.25rem;
   font-weight: 500;
 }
 
 .result-progress {
   color: var(--accent);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1.45rem;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -738,6 +922,13 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* Declared but never measured. It reads as a target, not as an achievement of
+   zero, because no evidence produced a zero. */
+.result-metrics strong.unmeasured {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .result-metrics span {
   margin-top: 2px;
   color: var(--muted);
@@ -770,7 +961,7 @@ button {
 
 .scorecard-item > strong {
   margin-top: auto;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1.55rem;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -789,6 +980,187 @@ button {
   margin-top: 7px;
   color: var(--muted);
   font-size: 0.62rem;
+}
+
+/* The two headline scores, not the diagnostics tiles below them. Diagnostics are
+   a uniform grid whose numbers line up along the bottom edge; the scores are two
+   cards of genuinely different length, because integrity carries its three
+   domains and alignment does not. Sharing `margin-top: auto` between them left
+   the alignment number floating at the bottom of a card sized by integrity. */
+.scores-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+/* ---------- the scoreboard ---------- */
+/* Three equal columns, one per commitment, each holding its results and the
+   metrics nested under them. Equal by declaration, not by content: a column
+   sized to its numbers would rank the promises by how much has been measured. */
+/* One row per commitment, full width, with its results as cards inside. Three
+   tall columns forced every heading to wrap and squeezed the numbers into a
+   third of the page; a row gives each commitment the whole measure. */
+.scoreboard {
+  display: grid;
+  gap: clamp(2rem, 4vh, 3rem);
+}
+
+.scoreboard-column {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.scoreboard-column > h3 {
+  grid-column: 1 / -1;
+}
+
+.scoreboard-column > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid rgb(var(--ink) / 0.6);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 92;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+
+.scoreboard-index {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: rgb(var(--ink));
+  color: #0b0f0c;
+  font-variation-settings: "wdth" 75;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreboard-result {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  padding: 1.2rem 1.15rem;
+  border: 1px solid rgb(var(--ink) / 0.22);
+  border-radius: 14px;
+  background: rgb(var(--ink) / 0.05);
+}
+
+.scoreboard-result-title {
+  margin: 0;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid rgb(var(--ink) / 0.22);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.scoreboard-metrics {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scoreboard-metrics li::before {
+  content: none;
+}
+
+/* Name, reading, rule. No box: a number and its target is one line. */
+.metric-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+}
+
+.metric-name {
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.96rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.metric-name small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.metric-reading {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 1.24rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.metric-reading.is-unmeasured {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.metric-target {
+  color: var(--muted);
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.metric-track {
+  grid-column: 1 / -1;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--ink) / 0.16);
+  overflow: hidden;
+}
+
+.metric-track > span {
+  display: block;
+  height: 100%;
+  background: rgb(var(--ink) / 0.85);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+
+
+.score-card > strong {
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 2.1rem;
+  line-height: 1.1;
+}
+
+.score-card > p {
+  min-height: 0;
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .scores-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .scorecard-item.boolean > strong {
@@ -886,7 +1258,7 @@ button {
 .brief-copy {
   margin-top: 18px;
   white-space: pre-wrap;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
   font-size: 1.05rem;
   line-height: 1.75;
 }
@@ -1260,9 +1632,6 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 /* ---------- private bookmarks workspace ---------- */
-.bookmarks-shell {
-  width: min(100%, 1180px);
-}
 
 .bookmarks-view {
   --bookmark-control: color-mix(in srgb, var(--surface-raised) 72%, var(--bg));
@@ -2213,5 +2582,654 @@ button.analytics-row:focus-visible .analytics-fill {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
+  }
+}
+
+/* A public project card opens nothing: the detail view is private. Keep the
+   shape, drop the affordance. */
+.project-card.static {
+  cursor: default;
+}
+
+.project-card.static .project-open,
+.project-card.static [aria-hidden="true"] {
+  visibility: hidden;
+}
+
+
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--border);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.language-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  padding: 0;
+}
+
+.language-switch button.is-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.language-switch button:hover {
+  color: var(--text);
+}
+
+/* ---------- the opening spread ---------- */
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  padding: clamp(2rem, 7vh, 5.5rem) 0 clamp(2rem, 5vh, 3.5rem);
+  max-width: none;
+}
+
+.masthead h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+  /* Archivo's width axis does the work a second font would otherwise do. */
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 112;
+  font-weight: 800;
+  font-size: clamp(2.9rem, 8.2vw, 5.6rem);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+
+/* The rule is the name's own underline rather than a separate element, so it is
+   exactly as long as the name is — at every viewport, in either language, and
+   whoever the name belongs to. A fixed-width bar under a fluid heading is a
+   coincidence waiting to stop being one. */
+.masthead-author {
+  order: -1;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 3px solid var(--accent);
+  font-variation-settings: "wdth" 84;
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Three stacked switches, all one width. Same size on purpose: they are
+   alternatives of equal standing, and a row that sizes itself to its text would
+   rank them by how long the sentence happens to be. */
+.commitments {
+  display: grid;
+  gap: 0.5rem;
+  margin: clamp(1.75rem, 4vh, 2.5rem) 0 0;
+  padding: 0;
+  list-style: none;
+  width: min(100%, 30rem);
+}
+
+.commitments li::before {
+  content: none;
+}
+
+.commitment {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.1rem;
+  padding: 0.7rem 1.1rem;
+  /* Resting is readable on its own, not a ghost waiting to be clicked: the
+     label is nearly full strength and the rim already carries the colour. Lit
+     then means brighter, rather than meaning legible-at-last. */
+  border: 1px solid rgb(var(--ink) / 0.28);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: color-mix(in srgb, var(--text) 84%, transparent);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 96;
+  font-weight: 600;
+  font-size: clamp(0.92rem, 1.35vw, 1.06rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  /* Slower on the way in than on the way out, and the glow trails the rest by a
+     beat — so the switch reads as something warming up rather than a class
+     being added. Matches the orb, which eases the same way. */
+  transition:
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    color 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    box-shadow 0.62s cubic-bezier(0.16, 1, 0.3, 1) 0.09s;
+}
+
+.commitment:not(.is-lit) {
+  transition:
+    border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.commitment:hover {
+  color: var(--text);
+  border-color: rgb(var(--ink) / 0.55);
+  background: color-mix(in srgb, var(--surface) 100%, transparent);
+}
+
+.commitment-label {
+  flex: 1 1 auto;
+}
+
+
+.commitment:focus-visible {
+  outline: 2px solid rgb(var(--ink));
+  outline-offset: 2px;
+}
+
+/* Lit: the button wears the colour its strand is drawn in, so the link between
+   the switch and the light is stated rather than remembered. */
+.commitment.is-lit {
+  color: var(--text);
+  border-color: rgb(var(--ink) / 0.85);
+  background: rgb(var(--ink) / 0.14);
+  box-shadow: 0 0 24px -6px rgb(var(--ink) / 0.55);
+}
+
+.commitment .commitment-index {
+  transition:
+    background 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: rgb(var(--ink) / 0.22);
+  color: rgb(var(--ink));
+  font-variation-settings: "wdth" 75;
+  font-weight: 700;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.commitment.is-lit .commitment-index {
+  background: rgb(var(--ink));
+  color: #0b0f0c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commitment {
+    transition: none;
+  }
+}
+
+.masthead-orb {
+  display: flex;
+  justify-content: center;
+}
+
+/* The orb inherits `color`, which is what the canvas samples for its ink. */
+.thinking-orb {
+  color: var(--accent);
+  max-width: 100%;
+  height: auto;
+  animation: orb-arrive 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes orb-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-orb {
+    animation: orb-fade 0.4s ease-out both;
+  }
+  @keyframes orb-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+@media (max-width: 720px) {
+  .masthead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .masthead-orb {
+    order: -1;
+    justify-content: flex-start;
+  }
+  .thinking-orb {
+    width: 190px !important;
+    height: 190px !important;
+  }
+}
+
+/* The declaration itself reads as a standfirst under the spread: serif, one
+   size up from body, and capped well inside the measure. */
+/* Always laid out, only ever faded. Opacity and transform do not reflow, so
+   nothing below this block moves when a switch is thrown. */
+.charter-card .charter-statement {
+  padding-left: 1.1rem;
+  border-left: 2px solid rgb(var(--ink, 140 140 140) / 0.55);
+  font-family: var(--font-serif);
+  font-size: clamp(1.02rem, 1.35vw, 1.2rem);
+  line-height: 1.62;
+  max-width: 68ch;
+  text-wrap: pretty;
+  color: var(--text);
+  opacity: 0.12;
+  transform: translateY(4px);
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+    border-color 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
+}
+
+.charter-card .charter-statement:not(.is-shown) {
+  border-left-color: rgb(var(--ink, 140 140 140) / 0.14);
+}
+
+.charter-card .charter-statement.is-shown {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charter-card .charter-statement {
+    transition: opacity 0.2s linear;
+    transform: none;
+  }
+}
+
+/* ---------- results, grouped by commitment ---------- */
+.result-groups {
+  display: grid;
+  gap: clamp(2rem, 4vh, 3rem);
+}
+
+.result-group > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid rgb(var(--ink) / 0.6);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 92;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+
+/* Results sit in a row inside their group: three of them, so the group reads as
+   one promise with its parts rather than as a stack that keeps going. */
+.result-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.result-group > h3 {
+  grid-column: 1 / -1;
+}
+
+.strategic-result {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1.3rem 1.25rem;
+  border: 1px solid rgb(var(--ink) / 0.22);
+  border-radius: 16px;
+  background: rgb(var(--ink) / 0.05);
+}
+
+.strategic-result > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.strategic-result h4 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.strategic-result .result-progress {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--ink));
+}
+
+.strategic-result .result-progress-track {
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--ink) / 0.16);
+  overflow: hidden;
+}
+
+.strategic-result .result-progress-track > span {
+  display: block;
+  height: 100%;
+  background: rgb(var(--ink) / 0.9);
+}
+
+.strategic-result .result-narrative {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* The work, as chips. Small because a project has its own page; here they
+   answer one question — is anything actually pointed at this. */
+.result-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-projects li::before {
+  content: none;
+}
+
+.result-project {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid rgb(var(--ink) / 0.4);
+  border-radius: 999px;
+  background: rgb(var(--ink) / 0.1);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.result-project.draft {
+  border-style: dashed;
+  border-color: var(--border);
+  background: none;
+  color: var(--muted);
+}
+
+.result-project small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.result-projects-empty {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.result-criteria {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* `.declaration li::before` is an absolutely positioned dot, so it is out of
+   flow and never was a grid item. Making the li a grid put the text alone in the
+   first column — 0.7rem wide — and every word landed on its own line. Keep the
+   inherited relative/absolute pattern and only change the colour. */
+.result-criteria li {
+  position: relative;
+  padding-left: 0.95rem;
+}
+
+.result-criteria li::before {
+  position: absolute;
+  top: 0.55em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(var(--ink));
+  content: "";
+}
+
+/* Off-site, so it does not pretend to be a tab — but it does share the row, and
+   an anchor next to buttons sits on its own baseline unless it is given the
+   same box. Same padding, same line-height, same everything but the underline. */
+.nav-away {
+  padding: 10px 13px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.nav-away::after {
+  content: " ↗";
+  font-size: 0.8em;
+}
+
+.nav-away:hover {
+  color: var(--text);
+}
+
+/* ---------- the map, grouped by commitment ---------- */
+.portfolio-groups {
+  display: grid;
+  gap: clamp(2rem, 4vh, 3rem);
+}
+
+.portfolio-group > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid rgb(var(--ink, 138 138 138) / 0.6);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 92;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* ---------- where to go next ---------- */
+/* Three invitations, each carrying the count of what is behind it. Vertical
+   rather than a row of equal boxes: the number leads, the name follows, and the
+   sentence explains — reading order is the design. */
+.onward {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: clamp(2rem, 5vh, 3.5rem);
+}
+
+.onward-card {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  padding: 1.4rem 1.3rem 1.2rem;
+  border: 1px solid rgb(var(--ink) / 0.28);
+  border-radius: 16px;
+  background: linear-gradient(
+    170deg,
+    rgb(var(--ink) / 0.09),
+    transparent 62%
+  );
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onward-card:hover {
+  border-color: rgb(var(--ink) / 0.75);
+  background: linear-gradient(170deg, rgb(var(--ink) / 0.16), transparent 62%);
+  box-shadow: 0 0 34px -10px rgb(var(--ink) / 0.6);
+  transform: translateY(-2px);
+}
+
+.onward-card:focus-visible {
+  outline: 2px solid rgb(var(--ink));
+  outline-offset: 3px;
+}
+
+.onward-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: rgb(var(--ink));
+  font-variant-numeric: tabular-nums;
+}
+
+.onward-count small {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.onward-label {
+  font-family: var(--font-sans);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}
+
+.onward-blurb {
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.onward-go {
+  margin-top: 0.35rem;
+  color: rgb(var(--ink));
+  font-size: 1rem;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onward-card:hover .onward-go {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onward-card,
+  .onward-go {
+    transition: none;
+  }
+  .onward-card:hover {
+    transform: none;
+  }
+}
+
+/* ---------- narrow ---------- */
+/* On a phone the header cannot be one row: a wordmark, five tabs, a language
+   switch and a sign-out button in 390px leaves each of them a few pixels. The
+   nav drops to its own full-bleed row and scrolls there, which is what a
+   scrolling nav needs to be usable — room to scroll in. */
+@media (max-width: 700px) {
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 12px;
+    padding-bottom: 4px;
+    min-height: 0;
+  }
+
+  .topbar-inner .nav {
+    order: 3;
+    flex: 1 0 100%;
+    margin-left: 0;
+    margin-inline: calc(var(--gutter, 1.5rem) * -1);
+    padding-inline: var(--gutter, 1.5rem);
+    scrollbar-width: none;
+  }
+
+  .topbar-inner .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .os-label {
+    margin-right: auto;
+  }
+
+  /* The orb leads on a phone, where there is no room beside the title for it. */
+  .masthead {
+    gap: 1rem;
+  }
+
+  .commitments {
+    width: 100%;
+  }
+
+  .onward {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scoreboard-column,
+  .result-group,
+  .portfolio-groups .project-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

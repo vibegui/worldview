@@ -6,6 +6,7 @@ import {
   type MetricsGroup,
 } from "./analytics.ts";
 import { enrichBookmark } from "./bookmark-enrichment.ts";
+import { fetchPageMetadata } from "./bookmark-metadata.ts";
 import {
   batchUpsertBookmarks,
   createBookmark,
@@ -18,16 +19,15 @@ import {
   searchBookmarks,
   updateBookmark,
 } from "./bookmarks.ts";
+import { DEFAULT_LOCALE, isLocale, t, tAll, type Locale } from "../core/localize.ts";
 import type { AccessLevel, Env } from "./env.ts";
 import { refreshGitHub } from "./github.ts";
 import {
-  getDeclaration,
   getPublicWriting,
   listPublicWriting,
   searchPublicWriting,
 } from "./public-content.ts";
 import { getCorpusStatus, searchWritingCorpus } from "./rag.ts";
-import { worldview } from "../core/worldview.ts";
 import {
   capture,
   createGoal,
@@ -47,7 +47,7 @@ import {
   recordDecision,
   remember,
   saveDailyBrief,
-  saveProject,
+  setProjectState,
   setProjectProgress,
   setStrategicResultProgress,
   updateScorecardItem,
@@ -64,7 +64,15 @@ export interface ToolDefinition {
   access: AccessLevel;
   inputSchema: Record<string, unknown>;
   _meta?: { ui: { resourceUri: string } };
-  execute: (env: Env, input: Record<string, unknown>) => Promise<unknown>;
+  /**
+   * `access` lets one tool serve both tiers with a narrower payload for
+   * strangers, rather than duplicating it into a public twin that drifts.
+   */
+  execute: (
+    env: Env,
+    input: Record<string, unknown>,
+    access: AccessLevel,
+  ) => Promise<unknown>;
 }
 
 const objectSchema = (
@@ -254,6 +262,72 @@ export const tools: ToolDefinition[] = [
     },
   },
   {
+    name: "SAVE_BOOKMARK",
+    description:
+      "Save a link. Pass the URL and nothing else: the page's own title, description, icon, site name, language, and publication date are read from its head. Everything else is optional. Re-saving the same URL updates it rather than failing, so this is safe to repeat. Enrichment, when configured, is a separate step.",
+    access: "private",
+    inputSchema: objectSchema(
+      {
+        url: { type: "string", format: "uri" },
+        notes: {
+          type: "string",
+          description: "Why this is worth keeping, in your words.",
+        },
+        stars: { type: "integer", minimum: 1, maximum: 5 },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Prefixed, e.g. "topic:ai", "persona:mcp_developer", "type:essay".',
+        },
+        enrich: {
+          type: "boolean",
+          description:
+            "Also run research and classification. Requires MESH_GATEWAY_URL and MESH_API_KEY; without them the bookmark is still saved.",
+        },
+      },
+      ["url"],
+    ),
+    _meta: { ui: { resourceUri: BOOKMARKS_RESOURCE } },
+    execute: async (env, input) => {
+      const url = requiredString(input, "url");
+      // Read the page first: a link with no title is a row nobody can find
+      // again, and this needs no key, no model, and no credit balance.
+      const page = await fetchPageMetadata(url).catch((error) => {
+        console.warn("bookmark metadata unavailable", String(error));
+        return null;
+      });
+
+      const bookmark = await createBookmark(env, {
+        // The URL after redirects is the one worth keeping — trackers and
+        // shorteners otherwise become the identity of the bookmark.
+        url: page?.url ?? url,
+        title: page?.title ?? null,
+        description: page?.description ?? null,
+        icon: page?.icon ?? null,
+        language: page?.language ?? null,
+        published_at: page?.publishedAt ?? null,
+        notes: optionalString(input, "notes") ?? null,
+        stars: optionalNumber(input, "stars") ?? null,
+        tags: Array.isArray(input.tags)
+          ? (input.tags as unknown[]).filter(
+              (tag): tag is string => typeof tag === "string",
+            )
+          : undefined,
+      });
+
+      if (input.enrich !== true) {
+        return { bookmark, metadata_read: Boolean(page) };
+      }
+      // Enrichment is best-effort on purpose: losing the link because a
+      // downstream service is unavailable is the worse outcome.
+      const enriched = await enrichBookmark(env, bookmark.url as string).catch(
+        (error) => ({ error: String(error) }),
+      );
+      return { bookmark, metadata_read: Boolean(page), enriched };
+    },
+  },
+  {
     name: "CREATE_BOOKMARK",
     description:
       "Create a private bookmark. URL is the unique natural key; Firecrawl Markdown is stored in R2.",
@@ -412,10 +486,17 @@ export const tools: ToolDefinition[] = [
   {
     name: "LIST_PUBLIC_WRITING",
     description:
-      "List published VibeGui articles. This is a public tool and never returns drafts or private state.",
+      "List published articles, newest first. Public, and never returns drafts or private state. Pass a locale to get one language; omit it and you get every language in one list, which is rarely what a reader wants.",
     access: "public",
-    inputSchema: objectSchema({}),
-    execute: async (env) => ({ writing: await listPublicWriting(env) }),
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        description: 'Manifest locale, e.g. "en" or "pt-BR".',
+      },
+    }),
+    execute: async (env, input) => ({
+      writing: await listPublicWriting(env, optionalString(input, "locale")),
+    }),
   },
   {
     name: "GET_PUBLIC_WRITING",
@@ -461,27 +542,58 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_DECLARATION",
     description:
-      "Answer the three questions this system exists for: what my life is about (the declared future, from git), what game I am playing (the strategic results and conditions of satisfaction), and whether I am playing it well (alignment and integrity). Read this before recommending priorities.",
-    access: "private",
-    inputSchema: objectSchema({}),
+      "What my life is about, what game I am playing, and whether I am playing it well: the declared future, the strategic results with their progress, the conditions of satisfaction, and the two scores. Public — the gap between what was declared and what is measured is meant to be checkable by someone other than its author.",
+    access: "public",
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        enum: ["pt-BR", "en"],
+        default: "pt-BR",
+        description:
+          "Which language to answer in. Defaults to Portuguese, the language the declaration is written and edited in.",
+      },
+    }),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env) => {
-      const [declaration, dashboard] = await Promise.all([
-        getDeclaration(env),
-        getDeclarationDashboard(env),
-      ]);
+    execute: async (env, input, access) => {
+      const locale = localeOf(input);
+      const dashboard = await getDeclarationDashboard(env, locale);
+
       return {
+        locale,
         what_my_life_is_about: {
-          declared_future: worldview.declaredFuture,
+          declared_future: t(env.worldview.declaredFuture, locale),
           source: "worldview.json",
-          long_form: declaration,
         },
         what_game_i_am_playing: {
+          commitments: (env.worldview.commitments ?? []).map((commitment) => ({
+            id: commitment.id,
+            label: t(commitment.label, locale),
+          })),
+          conditions_of_satisfaction: tAll(
+            env.worldview.conditionsOfSatisfaction,
+            locale,
+          ),
           strategic_results: dashboard.strategic_results,
-          conditions_of_satisfaction: worldview.conditionsOfSatisfaction,
         },
         am_i_playing_it_well: dashboard.scores,
-        diagnostics: dashboard.diagnostics,
+        // The targets are already public — they ship inside every strategic
+        // result. The *readings* are not: a target is something declared, a
+        // reading is where I actually am, and publishing that is a separate
+        // decision from publishing the declaration. So a stranger sees the bar
+        // and not the fill. Opening this later is one line; un-publishing a
+        // number that has been cached and indexed is not.
+        scorecard:
+          access === "private"
+            ? dashboard.scorecard
+            : dashboard.scorecard.map(({ current, note, updated_at, ...rest }) => {
+                void current;
+                void note;
+                void updated_at;
+                return { ...rest, current: null };
+              }),
+        // Readings taken against an earlier declaration. Working detail, and
+        // they name results that no longer exist, so they stay private.
+        ...(access === "private" ? { diagnostics: dashboard.diagnostics } : {}),
       };
     },
   },
@@ -537,63 +649,62 @@ export const tools: ToolDefinition[] = [
   {
     name: "GET_PORTFOLIO",
     description:
-      "Open the private Worldview OS project map: draft, active, and archived projects with goals, progress, work, and activity.",
-    access: "private",
-    inputSchema: objectSchema({}),
+      "The project map: what is being worked on, which declared strategic result each one serves, and how far along it is. Publicly this returns only projects that opted in with `public: true`, and never their prose — a project file states positions about work other people own.",
+    access: "public",
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        enum: ["pt-BR", "en"],
+        default: "pt-BR",
+        description:
+          "Which language to answer in. Defaults to Portuguese, the language the declaration is written and edited in.",
+      },
+    }),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env) => getPortfolio(env),
+    execute: async (env, input, access) => {
+      const portfolio = await getPortfolio(
+        env,
+        access !== "private",
+        localeOf(input),
+      );
+      if (access === "private") return portfolio;
+      // Unfiled captures are an inbox, and the daily brief is working notes.
+      // Neither is a declaration.
+      return { projects: portfolio.projects };
+    },
   },
   {
-    name: "SAVE_PROJECT",
-    description: "Create or update a project in the private project map.",
+    name: "SET_PROJECT_STATE",
+    description:
+      "Set the state of a project that is declared in the instance's git: lifecycle, review date, and deliberate order. It cannot create a project or change what a project is — name, declared outcome, success criteria, and which strategic results it serves live in projects/*.md, because changing intent is a commit.",
     access: "private",
     inputSchema: objectSchema(
       {
-        id: { type: "string" },
-        name: { type: "string" },
-        description: { type: "string" },
-        spirit: {
+        id: {
           type: "string",
-          description: "What place this project occupies in the owner's life",
+          description: "Id of a project declared in projects/*.md",
         },
-        repository: {
-          type: ["string", "null"],
-          description: "GitHub owner/repo",
-        },
-        lifecycle: {
-          type: "string",
-          enum: ["draft", "active", "archived"],
-        },
-        current_outcome: { type: "string" },
-        success_criteria: { type: "string" },
+        lifecycle: { type: "string", enum: ["draft", "active", "archived"] },
         next_review: { type: ["string", "null"] },
-        progress_percent: {
+        position: {
           type: ["number", "null"],
-          minimum: 0,
-          maximum: 100,
+          description:
+            "Deliberate order within the lifecycle group, lowest first. Not a priority label — it is the owner's chosen sequence. Omit to leave it untouched.",
         },
-        progress_note: { type: "string" },
       },
-      ["name"],
+      ["id"],
     ),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
     execute: async (env, input) =>
-      saveProject(env, {
-        id: optionalString(input, "id"),
-        name: requiredString(input, "name"),
-        description: optionalString(input, "description"),
-        spirit: optionalString(input, "spirit"),
-        repository: optionalNullableString(input, "repository"),
+      setProjectState(env, {
+        id: requiredString(input, "id"),
         lifecycle: optionalEnum(input, "lifecycle", [
           "draft",
           "active",
           "archived",
         ]),
-        current_outcome: optionalString(input, "current_outcome"),
-        success_criteria: optionalString(input, "success_criteria"),
         next_review: optionalNullableString(input, "next_review"),
-        progress_percent: optionalNullableNumber(input, "progress_percent"),
-        progress_note: optionalString(input, "progress_note"),
+        position: optionalNullableNumber(input, "position"),
       }),
   },
   {
@@ -628,11 +739,15 @@ export const tools: ToolDefinition[] = [
       "Get one private project with its goals, active memories, decisions, inbox, and recent activity.",
     access: "private",
     inputSchema: objectSchema(
-      { id: { type: "string", description: "Project id" } },
+      {
+        id: { type: "string", description: "Project id" },
+        locale: { type: "string", enum: ["pt-BR", "en"], default: "pt-BR" },
+      },
       ["id"],
     ),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env, input) => getProject(env, requiredString(input, "id")),
+    execute: async (env, input) =>
+      getProject(env, requiredString(input, "id"), localeOf(input)),
   },
   {
     name: "GET_ATTENTION_MAP",
@@ -1032,10 +1147,57 @@ export const toolByName: Record<string, ToolDefinition> = Object.fromEntries(
   tools.map((tool) => [tool.name, tool]),
 );
 
-export function toolsForAccess(access: AccessLevel): ToolDefinition[] {
-  return tools.filter(
-    (tool) => tool.access === "public" || access === "private",
-  );
+/**
+ * Which module each tool belongs to. A tool with no entry is core and always
+ * present; the rest exist only when the instance configured that module.
+ *
+ * Absent, not disabled: a tool that appears and then throws "not configured"
+ * advertises a capability the deployment cannot honour, and every caller has to
+ * learn that the hard way.
+ */
+const TOOL_MODULE: Record<string, "publicWriting" | "bookmarks" | "analytics"> =
+  {
+    LIST_PUBLIC_WRITING: "publicWriting",
+    GET_PUBLIC_WRITING: "publicWriting",
+    SEARCH_PUBLIC_WRITING: "publicWriting",
+    GET_CORPUS_STATUS: "publicWriting",
+    SITES_OVERVIEW: "analytics",
+    SITE_METRICS: "analytics",
+    LIST_BOOKMARKS: "bookmarks",
+    SEARCH_BOOKMARKS: "bookmarks",
+    GET_BOOKMARK: "bookmarks",
+    LIST_ALL_BOOKMARKS: "bookmarks",
+    SEARCH_ALL_BOOKMARKS: "bookmarks",
+    GET_BOOKMARK_ADMIN: "bookmarks",
+    CREATE_BOOKMARK: "bookmarks",
+    UPDATE_BOOKMARK: "bookmarks",
+    DELETE_BOOKMARK: "bookmarks",
+    IMPORT_BOOKMARKS: "bookmarks",
+    ENRICH_BOOKMARK: "bookmarks",
+  };
+
+export function toolsForAccess(
+  env: Env,
+  access: AccessLevel,
+): ToolDefinition[] {
+  // Publicly, the project map exists only if some project opted in. A tab that
+  // is always empty is worse than no tab: it advertises something the visitor
+  // cannot have, and the same "absent, not disabled" rule that governs modules
+  // should govern this.
+  const anyPublicProject = env.projects.some((project) => project.isPublic);
+
+  return tools.filter((tool) => {
+    if (tool.access !== "public" && access !== "private") return false;
+    if (
+      tool.name === "GET_PORTFOLIO" &&
+      access !== "private" &&
+      !anyPublicProject
+    ) {
+      return false;
+    }
+    const module = TOOL_MODULE[tool.name];
+    return !module || Boolean(env[module]);
+  });
 }
 
 export function mergeSemanticWriting<
@@ -1069,6 +1231,12 @@ function requiredString(input: Record<string, unknown>, key: string): string {
     throw new Error(`${key} is required`);
   }
   return value.trim();
+}
+
+/** Which language the caller asked for. Anything unrecognised reads as default. */
+function localeOf(input: Record<string, unknown>): Locale {
+  const value = input.locale;
+  return isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
 function optionalString(

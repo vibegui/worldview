@@ -4,7 +4,7 @@ import type { Env } from "../src/worker/env.ts";
 
 function env(token?: string): Env {
   return {
-    MCP_PRIVATE_TOKEN: token,
+    WORLDVIEW_PASSWORD: token,
   } as Env;
 }
 
@@ -28,6 +28,30 @@ describe("private MCP authentication", () => {
       headers: { "x-mcp-auth": "wrong" },
     });
     expect(accessForRequest(request, env("private-value"))).toBe("public");
+  });
+
+  test("honours the former secret name, so an existing deployment keeps working", () => {
+    // A deploy that forgets to re-put the secret under the new name would not
+    // error — it would silently drop to the public tier with every private tool
+    // gone. Accepting both names is what makes the rename a non-event.
+    const request = new Request("https://example.com/mcp", {
+      headers: { authorization: "Bearer legacy-value" },
+    });
+    expect(
+      accessForRequest(request, { MCP_PRIVATE_TOKEN: "legacy-value" } as Env),
+    ).toBe("private");
+  });
+
+  test("the new name wins when both are set", () => {
+    const request = new Request("https://example.com/mcp", {
+      headers: { authorization: "Bearer new-value" },
+    });
+    expect(
+      accessForRequest(request, {
+        WORLDVIEW_PASSWORD: "new-value",
+        MCP_PRIVATE_TOKEN: "legacy-value",
+      } as Env),
+    ).toBe("private");
   });
 
   test("timing-safe comparison handles equal and unequal values", () => {

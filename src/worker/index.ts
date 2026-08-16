@@ -1,3 +1,4 @@
+import type { Locale } from "../core/localize.ts";
 import { accessForRequest } from "./auth.ts";
 import {
   BookmarkError,
@@ -6,16 +7,62 @@ import {
   listBookmarks,
   searchBookmarks,
 } from "./bookmarks.ts";
-import type { Env } from "./env.ts";
+import type { Env, ResolvedConfig } from "./env.ts";
 import { refreshGitHub } from "./github.ts";
 import { handleMcpRequest } from "./mcp.ts";
+import { appHtml } from "./resources.ts";
+import {
+  COOKIE_NAME,
+  handleLogin,
+  handleLogout,
+  hasSession,
+  loginPage,
+  readCookie,
+  sessionCookieHeader,
+} from "./session.ts";
 import { markBriefDue } from "./state.ts";
 import { EVENT_NAME_RE, pruneEvents, track } from "./track.ts";
 
-const worker: ExportedHandler<Env> = {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const access = accessForRequest(request, env);
+/**
+ * Build the worker around one instance's configuration.
+ *
+ * The config is folded into `env` rather than threaded through every signature:
+ * handlers already receive `env`, and the declaration is read the same way a
+ * binding is. That keeps the diff at the call sites to `env.worldview` instead
+ * of a module-level import.
+ */
+export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
+  const SERVICE_NAME = config.worldview.instance;
+
+  // Every view, in both languages. `/en/...` mirrors the site, where the URL is
+  // the source of truth for language rather than a cookie.
+  const VIEWS = [
+    "/",
+    "/projects",
+    "/placar",
+    "/resultados",
+    "/analytics",
+    "/learning",
+    "/bookmarks",
+  ];
+  const VIEW_PATHS = new Set([
+    ...VIEWS,
+    ...VIEWS.map((view) => (view === "/" ? "/en/" : `/en${view}`)),
+    "/en",
+  ]);
+
+  return {
+    async fetch(request, baseEnv, ctx) {
+      const env: Env = { ...baseEnv, ...config };
+      const url = new URL(request.url);
+    // Two ways to hold the one credential: a bearer token an MCP client sends,
+    // or a signed cookie a browser got by typing the password. Both mean the
+    // same thing to every check downstream.
+    const access =
+      accessForRequest(request, env) === "private" ||
+      (await hasSession(request, env))
+        ? "private"
+        : "public";
 
     if (
       request.method === "OPTIONS" &&
@@ -30,8 +77,17 @@ const worker: ExportedHandler<Env> = {
       });
     }
 
+    // `/bookmarks` is both a JSON API the static site calls and a view a person
+    // navigates to. A browser asks for text/html and fetch() does not, so the
+    // two can share the path — which beats renaming an endpoint that is already
+    // deployed and consumed, or giving the tab a word that is not its name.
+    const wantsHtml = (request.headers.get("accept") ?? "").includes(
+      "text/html",
+    );
+
     if (
       request.method === "GET" &&
+      !wantsHtml &&
       (url.pathname === "/bookmarks" ||
         url.pathname === "/bookmarks/search" ||
         url.pathname === "/bookmarks/facets" ||
@@ -170,12 +226,53 @@ const worker: ExportedHandler<Env> = {
       return new Response(null, { status: 204 });
     }
 
-    if (request.method === "GET" && url.pathname === "/") {
-      return json({
-        name: "vibegui-personal-ai-os",
-        ok: true,
-        publicMcp: `${url.origin}/mcp`,
-        privateMode: access === "private",
+    if (request.method === "POST" && url.pathname === "/login") {
+      return handleLogin(request, env, url);
+    }
+
+    if (request.method === "POST" && url.pathname === "/logout") {
+      return handleLogout(url);
+    }
+
+    if (request.method === "GET" && url.pathname === "/login") {
+      return access === "private"
+        ? Response.redirect(new URL("/", url).toString(), 303)
+        : loginPage(url);
+    }
+
+    // The standalone entry point, and the public face. Anonymous visitors get
+    // the same bundle; the server decides what it may show them, and the app
+    // builds its nav from the tools it is actually allowed to call. One
+    // codebase, one boundary, no second frontend to keep in sync.
+    //
+    // Every view path serves the same bundle so a tab can have a real URL that
+    // survives a refresh. Listed rather than a catch-all, so an actual typo is
+    // still a 404 instead of a page that renders and then does nothing.
+    if (request.method === "GET" && VIEW_PATHS.has(url.pathname)) {
+      // `/en/...` is English, everything else Portuguese — the same rule the app
+      // uses, applied one layer earlier so the first paint is already right.
+      const locale: Locale =
+        url.pathname === "/en" || url.pathname.startsWith("/en/")
+          ? "en"
+          : "pt-BR";
+      return new Response(appHtml(env, null, true, locale), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          // A signed-in view must never be cached by anything in front of the
+          // worker. The anonymous one is the same bytes for everyone, so it is
+          // cached briefly and then served stale while it revalidates — a reader
+          // gets an instant response and at worst one revalidation behind, and
+          // the origin is hit once per minute rather than once per visitor.
+          // `stale-if-error` means a bad deploy or a D1 blip shows the last good
+          // page instead of an error.
+          "cache-control":
+            access === "private"
+              ? "no-store"
+              : "public, max-age=60, stale-while-revalidate=86400, stale-if-error=86400",
+          // The same URL is a different document depending on the cookie.
+          vary: "Cookie",
+          "x-content-type-options": "nosniff",
+        },
       });
     }
 
@@ -183,7 +280,7 @@ const worker: ExportedHandler<Env> = {
       return json({
         jsonrpc: "2.0",
         server: {
-          name: "vibegui-personal-ai-os",
+          name: SERVICE_NAME,
           version: "0.1.0",
         },
         mode: access,
@@ -192,28 +289,46 @@ const worker: ExportedHandler<Env> = {
     }
 
     if (request.method === "POST" && url.pathname === "/mcp") {
+      // A browser whose session expired should be sent back to the form, not
+      // shown a tool list with everything quietly missing. Only a request that
+      // carries our cookie can be in that situation; a plain MCP client with no
+      // token still gets the public tier.
+      if (access === "public" && readCookie(request, COOKIE_NAME)) {
+        // Clear the cookie that caused this. Without it the browser keeps
+        // presenting the same dead session, and since `/` now serves the app
+        // rather than the login form, the redirect has nothing to break the
+        // cycle — it just reloads and 401s again.
+        return new Response(JSON.stringify({ error: "session expired" }), {
+          status: 401,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store",
+            "set-cookie": sessionCookieHeader("", url, 0),
+          },
+        });
+      }
       return handleMcpRequest(request, env, access);
     }
 
-    return json({ error: "not found", path: url.pathname }, 404);
-  },
+      return json({ error: "not found", path: url.pathname }, 404);
+    },
 
-  async scheduled(_controller, env, context) {
-    context.waitUntil(
-      Promise.all([
-        markBriefDue(env),
-        pruneEvents(env),
-        env.GITHUB_TOKEN
-          ? refreshGitHub(env).catch((error) => {
-              console.warn("Scheduled GitHub refresh failed", error);
-            })
-          : Promise.resolve(),
-      ]).then(() => undefined),
-    );
-  },
-};
-
-export default worker;
+    async scheduled(_controller, baseEnv, context) {
+      const env: Env = { ...baseEnv, ...config };
+      context.waitUntil(
+        Promise.all([
+          markBriefDue(env),
+          pruneEvents(env),
+          env.GITHUB_TOKEN
+            ? refreshGitHub(env).catch((error) => {
+                console.warn("Scheduled GitHub refresh failed", error);
+              })
+            : Promise.resolve(),
+        ]).then(() => undefined),
+      );
+    },
+  };
+}
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {

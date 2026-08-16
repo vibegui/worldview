@@ -1,9 +1,15 @@
+import {
+  DEFAULT_LOCALE,
+  t,
+  tAll,
+  type Locale,
+  type LocalizedText,
+} from "../core/localize.ts";
 import type { Env } from "./env.ts";
 import {
   SCORE_IDS,
   type ScoreId,
   strategicResultById,
-  worldview,
 } from "../core/worldview.ts";
 
 type ProjectLifecycle = "draft" | "active" | "archived";
@@ -15,18 +21,16 @@ type MemoryKind =
   | "lesson"
   | "reflection";
 
-export interface SaveProjectInput {
-  id?: string;
-  name: string;
-  description?: string;
-  spirit?: string;
-  repository?: string | null;
+/**
+ * The writable half of a project. Everything else — name, outcome, success
+ * criteria, `serves` — is declared in the instance's git and cannot be set here.
+ */
+export interface SetProjectStateInput {
+  id: string;
   lifecycle?: ProjectLifecycle;
-  current_outcome?: string;
-  success_criteria?: string;
   next_review?: string | null;
-  progress_percent?: number | null;
-  progress_note?: string;
+  /** Deliberate order within the lifecycle group. Unset sorts last, by name. */
+  position?: number | null;
 }
 
 export interface CreateGoalInput {
@@ -69,21 +73,82 @@ export interface RememberInput {
  * are evidence, not declaration. A result declared in git with no row in D1 yet
  * simply reads as 0% — no migration needed to add one.
  */
-export async function getDeclarationDashboard(env: Env) {
-  const [progressRows, scorecard] = await Promise.all([
-    env.DB.prepare(
-      "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
-    ).all<Record<string, unknown>>(),
-    env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
-      Record<string, unknown>
-    >(),
-  ]);
+export async function getDeclarationDashboard(
+  env: Env,
+  locale: Locale = DEFAULT_LOCALE,
+) {
+  const [progressRows, scorecard, lifecycleRows] =
+    await Promise.all([
+      env.DB.prepare(
+        "SELECT id, progress_percent, progress_note, updated_at FROM strategic_results",
+      ).all<Record<string, unknown>>(),
+      env.DB.prepare("SELECT * FROM scorecard_items ORDER BY position").all<
+        Record<string, unknown>
+      >(),
+      env.DB.prepare("SELECT id, lifecycle FROM projects").all<{
+        id: string;
+        lifecycle: string;
+      }>(),
+    ]);
+
+  // Alignment is derived, never asserted: the share of active projects that
+  // serve at least one declared strategic result. `serves` comes from git and
+  // `lifecycle` from D1, so the score is the join of intent and state — which is
+  // the only thing it could honestly be.
+  const lifecycleById = new Map(
+    lifecycleRows.results.map((row) => [row.id, row.lifecycle]),
+  );
+  const activeProjects = env.projects.filter(
+    (project) =>
+      (lifecycleById.get(project.id) ?? project.initialLifecycle ?? "draft") ===
+      "active",
+  );
+  const projectsByResult = new Map<string, number>();
+  for (const project of activeProjects) {
+    for (const result of project.serves) {
+      projectsByResult.set(result, (projectsByResult.get(result) ?? 0) + 1);
+    }
+  }
+
+  // The work pointed at each result, named rather than counted. A count says a
+  // result is being pursued; the names say by what, which is the part worth
+  // reading next to it.
+  const workByResult = new Map<
+    string,
+    Array<{ id: string; name: string; repo: string | null; lifecycle: string }>
+  >();
+  for (const project of env.projects) {
+    const lifecycle = String(
+      lifecycleById.get(project.id) ?? project.initialLifecycle ?? "draft",
+    );
+    if (lifecycle === "archived") continue;
+    for (const result of project.serves) {
+      workByResult.set(result, [
+        ...(workByResult.get(result) ?? []),
+        {
+          id: project.id,
+          name: project.name,
+          repo: project.repo ?? null,
+          lifecycle,
+        },
+      ]);
+    }
+  }
 
   const progressById = new Map(
     progressRows.results.map((row) => [String(row.id), row]),
   );
 
-  const strategicResults = worldview.strategicResults
+  const active = activeProjects.length;
+  const serving = activeProjects.filter(
+    (project) => project.serves.length > 0,
+  ).length;
+  // No active projects is not zero alignment — it is nothing to measure. A share
+  // of nothing is not a number, and inventing one would be inventing a number.
+  const alignmentValue = active > 0 ? Math.round((serving / active) * 100) : null;
+  const unaligned = active - serving;
+
+  const strategicResults = env.worldview.strategicResults
     .slice()
     .sort((a, b) => a.position - b.position)
     .map((result) => {
@@ -93,13 +158,22 @@ export async function getDeclarationDashboard(env: Env) {
         position: result.position,
         stage: result.stage ?? null,
         score: result.score ?? null,
-        title: result.title,
-        narrative: result.narrative,
-        acceptance_criteria: result.acceptanceCriteria,
-        metrics: result.metrics,
+        commitment: result.commitment ?? null,
+        title: t(result.title, locale),
+        narrative: t(result.narrative, locale),
+        acceptance_criteria: tAll(result.acceptanceCriteria, locale),
+        metrics: result.metrics.map((metric) => ({
+          ...metric,
+          label: t(metric.label, locale),
+          unit: t(metric.unit, locale),
+        })),
         progress_percent: Number(progress?.progress_percent ?? 0),
         progress_note: String(progress?.progress_note ?? ""),
         updated_at: progress?.updated_at ?? null,
+        // How much active work is actually pointed at this result. Zero here on
+        // a result with progress is the interesting disagreement.
+        active_project_count: projectsByResult.get(result.id) ?? 0,
+        projects: workByResult.get(result.id) ?? [],
       };
     });
 
@@ -107,23 +181,104 @@ export async function getDeclarationDashboard(env: Env) {
     scorecard.results.map((row) => [String(row.id), row]),
   );
 
+  // The scorecard is not a separate list of numbers — it is every declared
+  // metric, read. Target and label come from git, the reading from D1, joined on
+  // the metric id. A metric with no row is `current: null`, which the UI shows
+  // as unmeasured; rendering it as 0 would claim a measurement nobody took.
+  const scorecardMetrics = env.worldview.strategicResults
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .flatMap((result) =>
+      result.metrics.map((metric) => {
+        const row = scoreValueById.get(metric.id);
+        const current = row?.current_value ?? row?.boolean_value ?? null;
+        return {
+          ...metric,
+          label: t(metric.label, locale),
+          unit: t(metric.unit, locale),
+          current: current === null ? null : Number(current),
+          note: String(row?.note ?? ""),
+          updated_at: row?.updated_at ?? null,
+          result_id: result.id,
+          result_title: t(result.title, locale),
+          commitment: result.commitment ?? null,
+        };
+      }),
+    );
+
+  const measuredIds = new Set(scorecardMetrics.map((metric) => metric.id));
+
   return {
     strategic_results: strategicResults,
+    scorecard: scorecardMetrics,
     scores: {
       alignment: {
-        ...worldview.scores.alignment,
+        ...localizedScore(env.worldview.scores.alignment, locale),
         ...pickScoreValue(scoreValueById.get("alignment")),
+        // Derived last, so it wins over anything previously typed into the
+        // scorecard row. The note explains the fraction rather than asserting it.
+        current_value: alignmentValue,
+        note: alignmentNote(locale, active, serving, unaligned),
       },
       integrity: {
-        ...worldview.scores.integrity,
+        ...localizedScore(env.worldview.scores.integrity, locale),
+        domains: Object.fromEntries(
+          Object.entries(env.worldview.scores.integrity.domains).map(
+            ([name, text]) => [name, t(text, locale)],
+          ),
+        ),
         ...pickScoreValue(scoreValueById.get("integrity")),
       },
     },
-    // Everything that used to be a top-level scorecard item stays available as
-    // diagnostic detail beneath the two scores. Nothing was dropped.
+    // Rows that no declared metric claims. They are readings taken against an
+    // earlier declaration, so they are not on the scorecard any more — and they
+    // are not deleted either, because a measurement someone actually took is
+    // evidence, and this is the only place it still exists.
     diagnostics: scorecard.results.filter(
-      (row) => !SCORE_IDS.includes(String(row.id) as ScoreId),
+      (row) =>
+        !SCORE_IDS.includes(String(row.id) as ScoreId) &&
+        !measuredIds.has(String(row.id)),
     ),
+  };
+}
+
+/** The one sentence the worker writes rather than reads, so it is translated here. */
+function alignmentNote(
+  locale: Locale,
+  active: number,
+  serving: number,
+  unaligned: number,
+): string {
+  if (active === 0) {
+    return locale === "en"
+      ? "No active projects to measure"
+      : "Nenhum projeto ativo para medir";
+  }
+  if (locale === "en") {
+    return (
+      `${serving} of ${active} active projects serve a declared result` +
+      (unaligned > 0
+        ? `; ${unaligned} ${unaligned === 1 ? "serves" : "serve"} nothing declared`
+        : "")
+    );
+  }
+  return (
+    `${serving} de ${active} projetos ativos servem um resultado declarado` +
+    (unaligned > 0
+      ? `; ${unaligned} não ${unaligned === 1 ? "serve" : "servem"} nada declarado`
+      : "")
+  );
+}
+
+function localizedScore<T extends Record<string, unknown>>(
+  score: T,
+  locale: Locale,
+) {
+  return {
+    ...score,
+    label: t(score.label as LocalizedText, locale),
+    question: t(score.question as LocalizedText, locale),
+    measure: t(score.measure as LocalizedText, locale),
   };
 }
 
@@ -142,7 +297,7 @@ export async function setStrategicResultProgress(
   progressPercent: number,
   progressNote = "",
 ) {
-  const declared = strategicResultById(id);
+  const declared = strategicResultById(env.worldview, id);
   if (!declared) {
     throw new Error(
       `Strategic result not declared in worldview.json: ${id}. ` +
@@ -217,69 +372,157 @@ export async function updateScorecardItem(
     .first();
 }
 
-export async function getPortfolio(env: Env) {
-  const projects = await env.DB.prepare(
+/**
+ * The portfolio: structure from git, state from D1, joined by id.
+ *
+ * Same seam as the declaration, one level down. A project declared in git with
+ * no D1 row reads as its initial lifecycle at 0% and needs no migration; a D1
+ * row for a project nobody declared is dropped, because state about a project
+ * that does not exist is not information.
+ */
+export async function getPortfolio(
+  env: Env,
+  publicOnly = false,
+  locale: Locale = DEFAULT_LOCALE,
+) {
+  const stateRows = await env.DB.prepare(
     `SELECT
       p.*,
       (SELECT COUNT(*) FROM goals g WHERE g.project_id = p.id AND g.status = 'active') AS active_goal_count,
       (SELECT MAX(a.occurred_at) FROM activity_events a WHERE a.project_id = p.id) AS last_activity_at,
       (SELECT COUNT(*) FROM captures c WHERE c.project_id = p.id AND c.status = 'inbox') AS inbox_count,
       (SELECT COUNT(*) FROM work_items w WHERE w.project_id = p.id AND w.state = 'open') AS open_work_item_count
-    FROM projects p
-    ORDER BY
-      CASE p.lifecycle
-        WHEN 'active' THEN 0
-        WHEN 'draft' THEN 1
-        ELSE 3
-      END,
-      p.name`,
-  ).all();
+    FROM projects p`,
+  ).all<Record<string, unknown>>();
 
-  const dailyBrief = await env.DB.prepare(
-    "SELECT * FROM daily_briefs ORDER BY brief_date DESC LIMIT 1",
-  ).first();
+  const stateById = new Map(
+    stateRows.results.map((row) => [String(row.id), row]),
+  );
+  const rank: Record<string, number> = { active: 0, draft: 1, archived: 3 };
+  // Which commitment a project sits under: the one its *primary* result serves.
+  // `serves` is ordered, primary first, and a project that genuinely spans two
+  // commitments still has to be filed somewhere — filing it by the result its
+  // author put first is the only ordering the declaration actually states.
+  const commitmentOf = new Map(
+    env.worldview.strategicResults.map((result) => [
+      result.id,
+      result.commitment ?? null,
+    ]),
+  );
 
-  return { daily_brief: dailyBrief, projects: projects.results };
+  const visible = publicOnly
+    ? env.projects.filter((project) => project.isPublic)
+    : env.projects;
+
+  const projects = visible
+    .map((declared) => {
+      const state = stateById.get(declared.id);
+      const lifecycle = String(
+        state?.lifecycle ?? declared.initialLifecycle ?? "draft",
+      );
+      return {
+        id: declared.id,
+        name: declared.name,
+        repository: declared.repo ?? null,
+        spirit: declared.spirit[locale],
+        current_outcome: declared.outcome[locale],
+        success_criteria: declared.successCriteria[locale],
+        // Many-to-many: real work serves more than one result, and forcing a
+        // single choice would make alignment lie by omission.
+        serves: declared.serves,
+        commitment: commitmentOf.get(declared.serves[0] ?? "") ?? null,
+        lifecycle,
+        position: state?.position ?? null,
+        next_review: state?.next_review ?? declared.initialNextReview ?? null,
+        progress_percent: state?.progress_percent ?? null,
+        progress_note: String(state?.progress_note ?? ""),
+        // Goal, inbox, and work-item counts are operational: they describe how
+        // the work is being run, not what was declared or how far it got.
+        ...(publicOnly
+          ? {}
+          : {
+              active_goal_count: Number(state?.active_goal_count ?? 0),
+              inbox_count: Number(state?.inbox_count ?? 0),
+              open_work_item_count: Number(state?.open_work_item_count ?? 0),
+              last_activity_at: state?.last_activity_at ?? null,
+            }),
+        updated_at: state?.updated_at ?? null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        (rank[a.lifecycle] ?? 2) - (rank[b.lifecycle] ?? 2) ||
+        // Deliberate order first; anything unplaced falls to the end of its
+        // lifecycle group and stays alphabetical.
+        (a.position === null ? 1 : 0) - (b.position === null ? 1 : 0) ||
+        Number(a.position ?? 0) - Number(b.position ?? 0) ||
+        a.name.localeCompare(b.name),
+    );
+
+  const [dailyBrief, unfiled] = await Promise.all([
+    env.DB.prepare(
+      "SELECT * FROM daily_briefs ORDER BY brief_date DESC LIMIT 1",
+    ).first(),
+    // Captures filed under no project. Everything else is reachable through the
+    // project it belongs to; these would be invisible without a home.
+    env.DB.prepare(
+      `SELECT * FROM captures
+       WHERE project_id IS NULL AND status = 'inbox'
+       ORDER BY created_at DESC`,
+    ).all(),
+  ]);
+
+  return {
+    daily_brief: dailyBrief,
+    projects,
+    unfiled: unfiled.results,
+  };
 }
 
-export async function saveProject(env: Env, input: SaveProjectInput) {
-  const id = input.id?.trim() || slugify(input.name);
-  if (!id) throw new Error("Project id or name is required");
+/**
+ * Set the state of a project the instance already declared in git.
+ *
+ * This replaced SAVE_PROJECT, which could bring a project into existence from a
+ * conversation. It no longer can: what a project *is* — its name, the outcome it
+ * declares, what would count as success, and which results it serves — is intent,
+ * and changing intent is a commit in the instance's repo. What this writes is
+ * only what you flip week to week.
+ *
+ * An id nobody declared is rejected for the same reason an undeclared strategic
+ * result is: state about something that does not exist is not information.
+ */
+export async function setProjectState(env: Env, input: SetProjectStateInput) {
+  const declared = env.projects.find((project) => project.id === input.id);
+  if (!declared) {
+    throw new Error(
+      `Project not declared in git: ${input.id}. ` +
+        `Add projects/${input.id}.md to the instance repository first. ` +
+        `Declared: ${env.projects.map((p) => p.id).join(", ") || "none"}`,
+    );
+  }
 
   await env.DB.prepare(
-    `INSERT INTO projects (
-        id, name, description, spirit, repository, lifecycle,
-        current_outcome, success_criteria, next_review, progress_percent,
-        progress_note
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        description = excluded.description,
-        spirit = excluded.spirit,
-        repository = excluded.repository,
-        lifecycle = excluded.lifecycle,
-        current_outcome = excluded.current_outcome,
-        success_criteria = excluded.success_criteria,
-        next_review = excluded.next_review,
-        progress_percent = excluded.progress_percent,
-        progress_note = excluded.progress_note,
-        updated_at = CURRENT_TIMESTAMP`,
+    `INSERT INTO projects (id, name, lifecycle, next_review, position)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       lifecycle = COALESCE(excluded.lifecycle, projects.lifecycle),
+       next_review = CASE WHEN ? THEN excluded.next_review ELSE projects.next_review END,
+       position = COALESCE(excluded.position, projects.position),
+       updated_at = CURRENT_TIMESTAMP`,
   )
     .bind(
-      id,
-      input.name.trim(),
-      input.description?.trim() ?? "",
-      input.spirit?.trim() ?? "",
-      input.repository?.trim() || null,
-      input.lifecycle ?? "draft",
-      input.current_outcome?.trim() ?? "",
-      input.success_criteria?.trim() ?? "",
-      input.next_review ?? null,
-      input.progress_percent ?? null,
-      input.progress_note?.trim() ?? "",
+      declared.id,
+      // The name column is legacy and no longer read; git owns it. It is written
+      // only because the column is NOT NULL.
+      declared.name,
+      input.lifecycle ?? declared.initialLifecycle ?? "draft",
+      input.next_review ?? declared.initialNextReview ?? null,
+      input.position ?? null,
+      input.next_review === undefined ? 0 : 1,
     )
     .run();
-  return getProject(env, id);
+
+  return getProject(env, declared.id);
 }
 
 export async function setProjectProgress(
@@ -288,26 +531,69 @@ export async function setProjectProgress(
   progressPercent: number,
   progressNote = "",
 ) {
+  // Declared in git is what makes a project real; a D1 row is just the first
+  // measurement of it. So this upserts rather than requiring a row to exist —
+  // otherwise the first progress note on a freshly declared project would fail.
+  const declared = env.projects.find((project) => project.id === id);
+  if (!declared) {
+    throw new Error(
+      `Project not declared in git: ${id}. ` +
+        `Add projects/${id}.md to the instance repository first.`,
+    );
+  }
   const boundedProgress = Math.min(
     100,
     Math.max(0, Math.round(progressPercent)),
   );
-  const result = await env.DB.prepare(
-    `UPDATE projects
-     SET progress_percent = ?, progress_note = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+  await env.DB.prepare(
+    `INSERT INTO projects (id, name, lifecycle, progress_percent, progress_note)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       progress_percent = excluded.progress_percent,
+       progress_note = excluded.progress_note,
+       updated_at = CURRENT_TIMESTAMP`,
   )
-    .bind(boundedProgress, progressNote.trim(), id)
+    .bind(
+      id,
+      declared.name,
+      declared.initialLifecycle ?? "draft",
+      boundedProgress,
+      progressNote.trim(),
+    )
     .run();
-  if (!result.meta.changes) throw new Error(`Project not found: ${id}`);
   return getProject(env, id);
 }
 
-export async function getProject(env: Env, id: string) {
-  const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?")
+export async function getProject(
+  env: Env,
+  id: string,
+  locale: Locale = DEFAULT_LOCALE,
+) {
+  const declared = env.projects.find((project) => project.id === id);
+  if (!declared) throw new Error(`Project not declared in git: ${id}`);
+
+  const state = await env.DB.prepare("SELECT * FROM projects WHERE id = ?")
     .bind(id)
-    .first();
-  if (!project) throw new Error(`Project not found: ${id}`);
+    .first<Record<string, unknown>>();
+
+  // Structure from git, state from D1. A project with no row yet is not
+  // missing — it is declared and unmeasured, which is the correct starting point.
+  const project = {
+    id: declared.id,
+    name: declared.name,
+    repository: declared.repo ?? null,
+    spirit: declared.spirit[locale],
+    current_outcome: declared.outcome[locale],
+    success_criteria: declared.successCriteria[locale],
+    serves: declared.serves,
+    body: declared.body,
+    lifecycle: state?.lifecycle ?? declared.initialLifecycle ?? "draft",
+    position: state?.position ?? null,
+    next_review: state?.next_review ?? declared.initialNextReview ?? null,
+    progress_percent: state?.progress_percent ?? null,
+    progress_note: String(state?.progress_note ?? ""),
+    updated_at: state?.updated_at ?? null,
+  };
 
   const [goals, memories, decisions, captures, activity, workItems] =
     await Promise.all([
@@ -393,22 +679,23 @@ export async function getAttentionMap(env: Env, days = 30) {
 
 export async function getStaleProjects(env: Env, days = 14) {
   const safeDays = Math.min(365, Math.max(1, days));
-  const modifier = `-${safeDays} days`;
-  const result = await env.DB.prepare(
-    `SELECT
-      p.*,
-      MAX(a.occurred_at) AS last_activity_at
-    FROM projects p
-    LEFT JOIN activity_events a ON a.project_id = p.id
-    WHERE p.lifecycle = 'active'
-    GROUP BY p.id
-    HAVING COALESCE(MAX(a.occurred_at), p.updated_at) < datetime('now', ?)
-    ORDER BY COALESCE(MAX(a.occurred_at), p.updated_at) ASC`,
-  )
-    .bind(modifier)
-    .all();
+  const cutoff = Date.now() - safeDays * 24 * 60 * 60 * 1000;
 
-  return { days: safeDays, projects: result.results };
+  // Built from the portfolio rather than its own query, so a project declared in
+  // git that has never been touched still counts as stale. Querying D1 alone
+  // would silently exclude exactly the projects most worth surfacing: the ones
+  // with no activity at all.
+  const { projects } = await getPortfolio(env);
+  const stale = projects
+    .filter((project) => project.lifecycle === "active")
+    .map((project) => ({
+      ...project,
+      seen: project.last_activity_at ?? project.updated_at ?? null,
+    }))
+    .filter(({ seen }) => !seen || Date.parse(`${seen}Z`) < cutoff)
+    .sort((a, b) => String(a.seen ?? "").localeCompare(String(b.seen ?? "")));
+
+  return { days: safeDays, projects: stale };
 }
 
 export async function listGoals(
