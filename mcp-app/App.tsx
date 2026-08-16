@@ -154,7 +154,6 @@ const UI = {
   target: { "pt-BR": "meta", en: "target" },
   portfolio: { "pt-BR": "Portfólio", en: "Portfolio" },
   projectsCount: { "pt-BR": "projetos", en: "projects" },
-  serves: { "pt-BR": "Serve", en: "Serves" },
   servesNothing: {
     "pt-BR": "Não serve nada declarado",
     en: "Serves nothing declared",
@@ -673,10 +672,13 @@ function ProjectCard({
         <p
           className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
         >
+          {/* No "Serves ·" prefix. The card already sits under the commitment
+              it serves, and the label was repeating on every line what the group
+              heading says once. */}
           {asStrings(project.serves).length
-            ? `${ui("serves")} · ${asStrings(project.serves)
+            ? asStrings(project.serves)
                 .map((id) => resultTitles[id] ?? id)
-                .join(" · ")}`
+                .join(" · ")
             : ui("servesNothing")}
         </p>
         <p className="spirit">
