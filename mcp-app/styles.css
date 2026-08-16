@@ -118,6 +118,133 @@ button {
   min-height: 64px;
 }
 
+/* Sits against the wordmark it explains, so it is sized to the wordmark's line
+   rather than to a touch target — the dialog it opens is the destination, and
+   `.topbar-inner` gives it 24px of clear space on the far side anyway. */
+.about-open {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.34);
+  border-radius: 50%;
+  margin-left: -14px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1;
+}
+
+.about-open:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* The backdrop is the blur. `backdrop-filter` on ::backdrop frosts everything
+   behind the top layer in one declaration — the alternative is a fixed overlay
+   that has to be told which stacking context to sit in. */
+.about::backdrop {
+  background: rgb(6 9 7 / 0.62);
+  backdrop-filter: blur(14px);
+}
+
+.about {
+  width: min(38rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 3rem);
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 18px;
+  margin: auto;
+  background: rgb(22 26 22 / 0.82);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.55);
+  color: var(--text);
+  overflow: auto;
+}
+
+.about[open] {
+  animation: about-arrive 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes about-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+.about-panel {
+  position: relative;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.about-panel h2 {
+  margin: 0.5rem 0 1.1rem;
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 104;
+  font-size: clamp(1.6rem, 4.4vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.about-panel p:not(.eyebrow) {
+  margin: 0 0 1rem;
+  color: rgb(238 237 231 / 0.86);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.about-repo {
+  display: inline-block;
+  padding: 9px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  margin-top: 0.4rem;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.about-repo:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.about-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.about-close:hover {
+  background: rgb(255 255 255 / 0.07);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about[open] {
+    animation: none;
+  }
+}
+
 /* Wide: the wordmark, the views inline, the language switch and sign out. The
    nav takes the slack so what follows stays pinned right; min-width lets it
    shrink rather than shove the button off the edge. */
