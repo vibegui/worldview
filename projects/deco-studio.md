@@ -5,7 +5,7 @@ repo: decocms/studio
 public: true
 lifecycle: active
 next_review: 2026-07-26
-serves: [autonomy, understanding]
+serves: [autonomy]
 ---
 
 **Espírito:** A ferramenta que eu queria ter quando estava começando

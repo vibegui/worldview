@@ -5,7 +5,7 @@ repo: vibegui/vibegui.com
 public: true
 lifecycle: active
 next_review: 2026-07-19
-serves: [expression, agency, understanding]
+serves: [expression, agency]
 ---
 
 **Espírito:** Meu Personal AI OS e os conceitos que eu queria conhecer quando comecei

@@ -4,7 +4,7 @@ name: Holocard
 repo: decocms/holocard
 lifecycle: active
 public: true
-serves: [autonomy, understanding]
+serves: [autonomy]
 ---
 
 **Espírito:** Uma foto e um recado viram uma coisa que a pessoa guarda.
