@@ -1430,9 +1430,23 @@ function DeclarationView({
   // under, so it stays below as plain prose rather than being dropped.
   const paragraphs = declaredFuture.split("\n\n").filter(Boolean);
   const commitments = declaration.commitments ?? [];
-  const trailing = paragraphs.slice(commitments.length);
   const alignment = asNullableRecord(scores?.alignment);
   const integrity = asNullableRecord(scores?.integrity);
+  // Every paragraph is always in the document. Revealing toggles opacity, never
+  // mounting, so the block reserves its full height from the first paint and
+  // nothing below it ever moves — a declaration that shoves the page around as
+  // you read it is worse than one that shows everything.
+  const statements = paragraphs.map((text, index) => {
+    const ink = STRAND_INKS[index % STRAND_INKS.length];
+    return {
+      text,
+      index,
+      ink: ink ? `${ink.r} ${ink.g} ${ink.b}` : undefined,
+      // Past the last commitment there is no switch to reveal it, so it stays
+      // visible rather than being unreachable.
+      shown: index >= commitments.length || lit.includes(index),
+    };
+  });
 
   return (
     <article className="declaration">
@@ -1454,7 +1468,6 @@ function DeclarationView({
               {commitments.map((commitment, index) => {
                 const ink = STRAND_INKS[index % STRAND_INKS.length]!;
                 const on = lit.includes(index);
-                const prose = paragraphs[index];
                 return (
                   <li
                     key={commitment}
@@ -1482,9 +1495,6 @@ function DeclarationView({
                         {on ? "\u2212" : "+"}
                       </span>
                     </button>
-                    {on && prose && (
-                      <p className="commitment-prose">{cleanMarkdown(prose)}</p>
-                    )}
                   </li>
                 );
               })}
@@ -1496,10 +1506,19 @@ function DeclarationView({
         </div>
       </header>
 
-      {trailing.length > 0 && (
+      {/* The declaration reads in its own place, under the spread. Selecting a
+          commitment reveals the paragraph that belongs to it, in declared order
+          rather than in the order they were clicked — the text is a document,
+          not a log of what the reader touched. */}
+      {statements.length > 0 && (
         <section className="charter-card">
-          {trailing.map((paragraph) => (
-            <p className="charter-statement" key={paragraph.slice(0, 40)}>
+          {statements.map(({ text: paragraph, ink, shown }) => (
+            <p
+              className={`charter-statement ${shown ? "is-shown" : ""}`}
+              key={paragraph.slice(0, 40)}
+              aria-hidden={!shown}
+              style={ink ? ({ "--ink": ink } as React.CSSProperties) : undefined}
+            >
               {cleanMarkdown(paragraph)}
             </p>
           ))}

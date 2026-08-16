@@ -2648,34 +2648,9 @@ button.analytics-row:focus-visible .analytics-fill {
   color: #0b0f0c;
 }
 
-/* The paragraph the switch opens. Indented to the label, so it reads as
-   belonging to that commitment rather than to the stack. */
-.commitment-prose {
-  margin: 0.6rem 0 0.9rem;
-  padding-left: 2.2rem;
-  padding-right: 0.5rem;
-  border-left: 0;
-  color: var(--muted);
-  font-family: var(--font-serif);
-  font-size: 0.98rem;
-  line-height: 1.6;
-  text-wrap: pretty;
-  animation: commitment-open 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes commitment-open {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .commitment {
     transition: none;
-  }
-  .commitment-prose {
-    animation: none;
   }
 }
 
@@ -2727,11 +2702,37 @@ button.analytics-row:focus-visible .analytics-fill {
 
 /* The declaration itself reads as a standfirst under the spread: serif, one
    size up from body, and capped well inside the measure. */
+/* Always laid out, only ever faded. Opacity and transform do not reflow, so
+   nothing below this block moves when a switch is thrown. */
 .charter-card .charter-statement {
+  padding-left: 1.1rem;
+  border-left: 2px solid rgb(var(--ink, 140 140 140) / 0.55);
   font-family: var(--font-serif);
   font-size: clamp(1.02rem, 1.35vw, 1.2rem);
   line-height: 1.62;
   max-width: 68ch;
   text-wrap: pretty;
   color: var(--text);
+  opacity: 0.12;
+  transform: translateY(4px);
+  transition:
+    opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.charter-card .charter-statement:not(.is-shown) {
+  border-left-color: rgb(var(--ink, 140 140 140) / 0.14);
+}
+
+.charter-card .charter-statement.is-shown {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .charter-card .charter-statement {
+    transition: opacity 0.2s linear;
+    transform: none;
+  }
 }
