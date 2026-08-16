@@ -2560,7 +2560,7 @@ button.analytics-row:focus-visible .analytics-fill {
   margin: clamp(1.75rem, 4vh, 2.5rem) 0 0;
   padding: 0;
   list-style: none;
-  width: min(100%, 24rem);
+  width: min(100%, 30rem);
 }
 
 .commitments li::before {
@@ -2574,10 +2574,13 @@ button.analytics-row:focus-visible .analytics-fill {
   width: 100%;
   min-height: 3.1rem;
   padding: 0.7rem 1.1rem;
-  border: 1px solid var(--border);
+  /* Resting is readable on its own, not a ghost waiting to be clicked: the
+     label is nearly full strength and the rim already carries the colour. Lit
+     then means brighter, rather than meaning legible-at-last. */
+  border: 1px solid rgb(var(--ink) / 0.28);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: color-mix(in srgb, var(--text) 84%, transparent);
   font-family: var(--font-sans);
   font-variation-settings: "wdth" 96;
   font-weight: 600;
@@ -2595,7 +2598,20 @@ button.analytics-row:focus-visible .analytics-fill {
 
 .commitment:hover {
   color: var(--text);
-  border-color: rgb(var(--ink) / 0.5);
+  border-color: rgb(var(--ink) / 0.55);
+  background: color-mix(in srgb, var(--surface) 100%, transparent);
+}
+
+.commitment-label {
+  flex: 1 1 auto;
+}
+
+.commitment-chevron {
+  flex: 0 0 auto;
+  color: rgb(var(--ink));
+  font-size: 1.05rem;
+  line-height: 1;
+  opacity: 0.75;
 }
 
 .commitment:focus-visible {
@@ -2619,7 +2635,7 @@ button.analytics-row:focus-visible .analytics-fill {
   width: 1.45rem;
   height: 1.45rem;
   border-radius: 50%;
-  background: rgb(var(--ink) / 0.16);
+  background: rgb(var(--ink) / 0.22);
   color: rgb(var(--ink));
   font-variation-settings: "wdth" 75;
   font-weight: 700;
@@ -2632,9 +2648,34 @@ button.analytics-row:focus-visible .analytics-fill {
   color: #0b0f0c;
 }
 
+/* The paragraph the switch opens. Indented to the label, so it reads as
+   belonging to that commitment rather than to the stack. */
+.commitment-prose {
+  margin: 0.6rem 0 0.9rem;
+  padding-left: 2.2rem;
+  padding-right: 0.5rem;
+  border-left: 0;
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-size: 0.98rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+  animation: commitment-open 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes commitment-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .commitment {
     transition: none;
+  }
+  .commitment-prose {
+    animation: none;
   }
 }
 

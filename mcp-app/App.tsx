@@ -1425,8 +1425,12 @@ function DeclarationView({
   // fetched from the blog's DECLARATION.md and shown behind "Read the full
   // charter" — a product charter from an older cycle, quietly contradicting the
   // one above it.
-  const statement = declaredFuture;
+  // One paragraph per commitment, in order: the button is the heading and the
+  // paragraph is what it opens. Anything past the third has no switch to sit
+  // under, so it stays below as plain prose rather than being dropped.
+  const paragraphs = declaredFuture.split("\n\n").filter(Boolean);
   const commitments = declaration.commitments ?? [];
+  const trailing = paragraphs.slice(commitments.length);
   const alignment = asNullableRecord(scores?.alignment);
   const integrity = asNullableRecord(scores?.integrity);
 
@@ -1450,17 +1454,18 @@ function DeclarationView({
               {commitments.map((commitment, index) => {
                 const ink = STRAND_INKS[index % STRAND_INKS.length]!;
                 const on = lit.includes(index);
+                const prose = paragraphs[index];
                 return (
-                  <li key={commitment}>
+                  <li
+                    key={commitment}
+                    style={
+                      { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                    }
+                  >
                     <button
                       type="button"
                       className={`commitment ${on ? "is-lit" : ""}`}
-                      aria-pressed={on}
-                      style={
-                        {
-                          "--ink": `${ink.r} ${ink.g} ${ink.b}`,
-                        } as React.CSSProperties
-                      }
+                      aria-expanded={on}
                       onClick={() =>
                         setLit((current) =>
                           current.includes(index)
@@ -1472,8 +1477,14 @@ function DeclarationView({
                       <span className="commitment-index" aria-hidden="true">
                         {index + 1}
                       </span>
-                      {commitment}
+                      <span className="commitment-label">{commitment}</span>
+                      <span className="commitment-chevron" aria-hidden="true">
+                        {on ? "\u2212" : "+"}
+                      </span>
                     </button>
+                    {on && prose && (
+                      <p className="commitment-prose">{cleanMarkdown(prose)}</p>
+                    )}
                   </li>
                 );
               })}
@@ -1485,13 +1496,15 @@ function DeclarationView({
         </div>
       </header>
 
-      <section className="charter-card">
-        {statement.split("\n\n").map((paragraph) => (
-          <p className="charter-statement" key={paragraph.slice(0, 40)}>
-            {cleanMarkdown(paragraph)}
-          </p>
-        ))}
-      </section>
+      {trailing.length > 0 && (
+        <section className="charter-card">
+          {trailing.map((paragraph) => (
+            <p className="charter-statement" key={paragraph.slice(0, 40)}>
+              {cleanMarkdown(paragraph)}
+            </p>
+          ))}
+        </section>
+      )}
 
       {/* The scorecard, not the scores. A number with a target next to it is
           something to act on this week; the two scores are a summary of these

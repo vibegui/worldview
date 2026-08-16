@@ -63,7 +63,11 @@ export function ThinkingOrb({
   active = [],
 }: {
   size?: number;
-  /** Indices to show. Empty means all of them — the resting state. */
+  /**
+   * Which strands are turned up. Nothing is ever hidden: a selection raises the
+   * gain on one light and lowers the others, so the ring keeps its shape and
+   * the reader keeps their bearings. Selecting all three lifts the whole signal.
+   */
   active?: number[];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,19 +108,26 @@ export function ThinkingOrb({
 
       context.clearRect(0, 0, size, size);
 
-      const showing = activeRef.current.length
-        ? activeRef.current
-        : STRAND_INKS.map((_, index) => index);
+      const chosen = activeRef.current;
+      // Resting is deliberately below full, so that choosing everything is
+      // visibly brighter than choosing nothing rather than identical to it.
+      const gainOf = (index: number) =>
+        chosen.length === 0 ? 0.62 : chosen.includes(index) ? 1 : 0.3;
 
-      // The ambient glow the ring sits in, tinted by whatever is lit. Drawn
-      // normally, under everything.
-      const glow = showing
-        .map((index) => ramps[index]!.deep)
-        .reduce((total, ink) => ({
-          r: total.r + ink.r / showing.length,
-          g: total.g + ink.g / showing.length,
-          b: total.b + ink.b / showing.length,
-        }), { r: 0, g: 0, b: 0 });
+      // The ambient glow, weighted the same way — the room dims with the lights
+      // that are down.
+      const glow = STRAND_INKS.reduce(
+        (total, _, index) => {
+          const ink = ramps[index]!.deep;
+          const gain = gainOf(index) / STRAND_INKS.length;
+          return {
+            r: total.r + ink.r * gain,
+            g: total.g + ink.g * gain,
+            b: total.b + ink.b * gain,
+          };
+        },
+        { r: 0, g: 0, b: 0 },
+      );
       const halo = context.createRadialGradient(
         centre,
         centre,
@@ -138,8 +149,9 @@ export function ThinkingOrb({
       context.lineCap = "round";
       context.lineJoin = "round";
 
-      for (const strand of showing) {
+      for (let strand = 0; strand < STRANDS; strand += 1) {
         const { deep, hot } = ramps[strand]!;
+        const gain = gainOf(strand);
         const phase = (strand / STRANDS) * Math.PI * 2;
         const points: Array<{ x: number; y: number; depth: number }> = [];
 
@@ -188,9 +200,10 @@ export function ThinkingOrb({
               context.lineTo(next.x, next.y);
             }
             context.strokeStyle = `rgba(${shade.r | 0},${shade.g | 0},${shade.b | 0},${
-              pass.alpha * (0.18 + here.depth ** 1.2 * 1.15)
+              pass.alpha * (0.18 + here.depth ** 1.2 * 1.15) * gain
             })`;
-            context.lineWidth = pass.width * (0.22 + here.depth ** 1.4 * 1.5);
+            context.lineWidth =
+              pass.width * (0.22 + here.depth ** 1.4 * 1.5) * (0.6 + gain * 0.4);
             context.stroke();
           }
         }
