@@ -137,6 +137,10 @@ const UI = {
   menu: { "pt-BR": "Menu", en: "Menu" },
   closeMenu: { "pt-BR": "Fechar o menu", en: "Close the menu" },
   declarationTitle: { "pt-BR": "Declaração 2030", en: "Declaration 2030" },
+  declarationWhat: {
+    "pt-BR": "Declaração de Futuro",
+    en: "Declaration of Future",
+  },
   aboutMyLife: { "pt-BR": "O que é a minha vida", en: "What my life is about" },
   metricsEyebrow: {
     "pt-BR": "Métricas que confirmam o sucesso",
@@ -1628,7 +1632,10 @@ function DeclarationView({
             <span className="masthead-author">
               {declaration.author ?? "Guilherme Rodrigues"}
             </span>
-            <span>{ui("declarationTitle")}</span>
+            {/* Two lines, deliberately: what it is, then the horizon it is
+                declared to. The year is a date, so it does not translate. */}
+            <span className="masthead-what">{ui("declarationWhat")}</span>
+            <span className="masthead-year">2030</span>
           </h1>
           {commitments.length > 0 && (
             <ol className="commitments">
@@ -1666,7 +1673,7 @@ function DeclarationView({
           )}
         </div>
         <div className="masthead-orb">
-          <ThinkingOrb size={360} active={lit} />
+          <ThinkingOrb size={430} active={lit} />
         </div>
       </header>
       )}

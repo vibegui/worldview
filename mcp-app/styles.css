@@ -118,53 +118,54 @@ button {
   min-height: 64px;
 }
 
-/* One row at every width: the wordmark, and a menu.
-   The tab strip is gone. Seven tabs, a language switch and a sign-out button
-   never fit the 1024 container — "Blog" sat clipped behind PT/EN on a desktop —
-   and on a phone they dropped to a second full-bleed row that cost a band of the
-   screen and, being a scroll container, could be dragged vertically too. A menu
-   holds all nine in a list that is never too narrow for any of them. */
-.menu-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 13px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+/* Wide: the wordmark, the views inline, the language switch and sign out. The
+   nav takes the slack so what follows stays pinned right; min-width lets it
+   shrink rather than shove the button off the edge. */
+.topbar-inner .nav {
+  min-width: 0;
+  margin-bottom: 0;
   margin-left: auto;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  border-bottom: 0;
+  gap: 2px;
 }
 
-.menu-toggle:hover {
-  border-color: var(--muted);
+.topbar-inner .nav button {
+  padding-inline: 11px;
 }
 
-/* Three rules drawn with the box's own borders — a span, its two
-   pseudo-elements and one border each, rather than an icon font or an inline
-   SVG for six pixels. Open, the outer two cross and the middle one goes. */
-.menu-bars,
-.menu-bars::before,
-.menu-bars::after {
-  display: block;
-  width: 16px;
-  border-top: 1.5px solid currentcolor;
+/* Narrow: none of that fits, so it collapses into a menu. `display: contents`
+   is what lets one set of markup be both — a wide screen lays these out as
+   direct children of the header row, and only the phone query makes the
+   wrapper a box. */
+.topbar-actions {
+  display: contents;
 }
 
+.menu-toggle,
+.menu-scrim {
+  display: none;
+}
+
+/* Three rules and a box 10px tall: the outer two are the pseudo-elements pinned
+   to its edges, the middle one is a background layer at 50%, which is what makes
+   the gaps exactly equal at any device pixel ratio. Borders on a zero-height box
+   put the middle rule half a pixel off its own centre. Open, the outer two meet
+   in the middle and cross, and the middle one goes. */
 .menu-bars {
   position: relative;
-  height: 0;
-  transition: border-color 0.16s;
+  width: 17px;
+  height: 11px;
+  background: linear-gradient(currentcolor, currentcolor) 0 50% / 100% 1.5px
+    no-repeat;
 }
 
 .menu-bars::before,
 .menu-bars::after {
   position: absolute;
   left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: currentcolor;
   content: "";
   transition:
     top 0.16s,
@@ -172,20 +173,20 @@ button {
 }
 
 .menu-bars::before {
-  top: -5px;
+  top: 0;
 }
 
 .menu-bars::after {
-  top: 5px;
+  top: calc(100% - 1.5px);
 }
 
 [aria-expanded="true"] .menu-bars {
-  border-top-color: transparent;
+  background: none;
 }
 
 [aria-expanded="true"] .menu-bars::before,
 [aria-expanded="true"] .menu-bars::after {
-  top: 0;
+  top: calc(50% - 0.75px);
 }
 
 [aria-expanded="true"] .menu-bars::before {
@@ -196,85 +197,7 @@ button {
   transform: rotate(-45deg);
 }
 
-/* Covers the page so the next click anywhere closes the menu, and nothing
-   underneath is hit by accident on the way. */
-.menu-scrim {
-  position: fixed;
-  z-index: 8;
-  padding: 0;
-  border: 0;
-  background: rgb(0 0 0 / 0.4);
-  inset: 0;
-}
-
-.topbar-actions {
-  display: none;
-}
-
-.topbar-actions.is-open {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 1rem;
-  z-index: 9;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-  min-width: 14rem;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg);
-  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
-}
-
-.topbar-actions.is-open .nav {
-  flex-direction: column;
-  align-items: stretch;
-  margin: 0;
-  border-bottom: 0;
-  gap: 0;
-  overflow: visible;
-}
-
-.topbar-actions.is-open .nav button,
-.topbar-actions.is-open .nav-away {
-  padding: 11px 12px 13px;
-  border-radius: 9px;
-  font-size: 15px;
-  text-align: left;
-}
-
-.topbar-actions.is-open .nav button.active {
-  background: rgb(255 255 255 / 0.05);
-}
-
-/* The mark for the active tab is an underline along the bottom of a button that
-   is exactly as wide as its label. Stacked, those buttons are all the width of
-   the panel, so it becomes a short rule under the first word instead. */
-.topbar-actions.is-open .nav button.active::after {
-  right: auto;
-  bottom: 7px;
-  left: 12px;
-  width: 20px;
-}
-
-.topbar-actions.is-open .nav-away::after {
-  display: none;
-}
-
-.topbar-actions.is-open .language-switch {
-  padding: 10px 12px 6px;
-  border-top: 1px solid var(--border);
-  margin: 4px 0 0;
-}
-
-.topbar-actions.is-open form {
-  padding: 0 12px 6px;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .menu-bars,
   .menu-bars::before,
   .menu-bars::after {
     transition: none;
@@ -2787,9 +2710,9 @@ button.analytics-row:focus-visible .analytics-fill {
 /* ---------- the opening spread ---------- */
 .masthead {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
   align-items: center;
-  gap: clamp(1.5rem, 4vw, 4rem);
+  gap: clamp(1rem, 2vw, 2rem);
   padding: clamp(2rem, 7vh, 5.5rem) 0 clamp(2rem, 5vh, 3.5rem);
   max-width: none;
 }
@@ -2804,11 +2727,24 @@ button.analytics-row:focus-visible .analytics-fill {
   font-family: var(--font-sans);
   font-variation-settings: "wdth" 112;
   font-weight: 800;
-  font-size: clamp(2.9rem, 8.2vw, 5.6rem);
   line-height: 0.9;
   letter-spacing: -0.035em;
   text-transform: uppercase;
   text-wrap: balance;
+}
+
+/* The two lines are sized against each other rather than set from one scale:
+   "Declaração de Futuro" is three times the character count of "2030", so at a
+   single size it either overruns the column or holds the year down with it. */
+.masthead-what {
+  font-variation-settings: "wdth" 96;
+  font-size: clamp(1.6rem, 3.9vw, 2.55rem);
+  letter-spacing: -0.02em;
+}
+
+.masthead-year {
+  margin-top: -0.1em;
+  font-size: clamp(3.4rem, 9.4vw, 6rem);
 }
 
 
@@ -2939,9 +2875,13 @@ button.analytics-row:focus-visible .analytics-fill {
   }
 }
 
+/* Pulled left into the gap and dropped below the type's baseline: the orb is
+   mostly falloff at its rim, so centring it in its own column leaves it looking
+   further away than it is. Transform rather than margin, so nothing reflows. */
 .masthead-orb {
   display: flex;
   justify-content: center;
+  transform: translate(clamp(-3.5rem, -4vw, -1rem), clamp(0.5rem, 2.6vw, 2.5rem));
 }
 
 /* The orb inherits `color`, which is what the canvas samples for its ink. */
@@ -2978,6 +2918,7 @@ button.analytics-row:focus-visible .analytics-fill {
   .masthead-orb {
     order: -1;
     justify-content: flex-start;
+    transform: none;
   }
   .thinking-orb {
     width: 190px !important;
@@ -3344,10 +3285,134 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 /* ---------- narrow ---------- */
-@media (max-width: 700px) {
+/* The header cannot be one row here: a wordmark, five tabs, a language switch
+   and a sign-out button in 390px leaves each of them a few pixels. It used to
+   drop the nav to a second full-bleed scrolling row, which spent a band of the
+   screen and — a horizontal scroller still being a scroll container — could be
+   dragged up and down as well as sideways. So: a wordmark, and a menu. */
+/* 1023 and not a rounder number: the container tops out at 1024, and measured
+   across widths the tab row starts clipping the moment the viewport drops below
+   it. Signed in there are seven tabs, a language switch and a sign-out button —
+   the widest the header ever gets — so the breakpoint is set for that case. */
+@media (max-width: 1023px) {
   .topbar-inner {
     gap: 12px;
     min-height: 56px;
+  }
+
+  .os-label {
+    margin-right: auto;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .menu-toggle:hover {
+    border-color: var(--muted);
+  }
+
+  /* Covers the page so the next click anywhere closes the menu, and nothing
+     underneath is hit by accident on the way. */
+  .menu-scrim {
+    position: fixed;
+    z-index: 8;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: rgb(0 0 0 / 0.4);
+    inset: 0;
+  }
+
+  .topbar-actions {
+    display: none;
+  }
+
+  .topbar-actions.is-open {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 1rem;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 14rem;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+  }
+
+  .topbar-actions.is-open .nav {
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0;
+    border-bottom: 0;
+    gap: 0;
+    overflow: visible;
+  }
+
+  .topbar-actions.is-open .nav button,
+  .topbar-actions.is-open .nav-away {
+    padding: 11px 12px 13px;
+    border-radius: 9px;
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .topbar-actions.is-open .nav button.active {
+    background: rgb(255 255 255 / 0.05);
+  }
+
+  /* The mark for the active tab is an underline along the bottom of a button as
+     wide as its label. Stacked, those buttons are all the width of the panel, so
+     it becomes a short rule under the first word instead. */
+  .topbar-actions.is-open .nav button.active::after {
+    right: auto;
+    bottom: 7px;
+    left: 12px;
+    width: 20px;
+  }
+
+  .topbar-actions.is-open .nav-away::after {
+    display: none;
+  }
+
+  .topbar-actions.is-open .language-switch {
+    padding: 10px 12px 6px;
+    border-top: 1px solid var(--border);
+    margin: 4px 0 0;
+  }
+
+  .topbar-actions.is-open form {
+    padding: 0 12px 6px;
+  }
+}
+
+/* The content breakpoint is its own: the row of tabs runs out of room before a
+   two-column grid does. */
+@media (max-width: 700px) {
+  /* 40px of header margin plus 7vh of masthead padding is most of a thumb's
+     first screen spent on nothing. A phone screen is the scarce one. */
+  .topbar {
+    margin-bottom: 14px;
+  }
+
+  .masthead {
+    padding-top: 1.25rem;
   }
 
   /* The orb leads on a phone, where there is no room beside the title for it. */
