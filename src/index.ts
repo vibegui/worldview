@@ -19,7 +19,6 @@ import { createWorker } from "./worker/index.ts";
 // that generated this would put a pipeline back into what should be config.
 import anjoChat from "../projects/anjo-chat.md";
 import decoStudio from "../projects/deco-studio.md";
-import decocms from "../projects/decocms.md";
 import mangabeiraChat from "../projects/mangabeira-chat.md";
 import personalCrm from "../projects/personal-crm.md";
 import personalFiles from "../projects/personal-files.md";
@@ -34,7 +33,6 @@ export default createWorker({
   projects: parseProjects([
     vibegui,
     decoStudio,
-    decocms,
     mangabeiraChat,
     personalCrm,
     personalFiles,
