@@ -3,8 +3,8 @@
   "instance": "vibegui",
   "name": "vibegui ⋅ Worldview",
   "declaredFuture": {
-    "pt-BR": "Sou um desenvolvedor-fundador comprometido em tornar o Brasil protagonista em tecnologia global. Foco nos motivos para dar certo e convido quem está ao meu redor a ver a vida assim também.\n\nDefendo que toda pessoa tenha liberdade para descobrir e viver seu maior potencial, e software é minha alavanca. Na deco, construo experiências digitais que se operam sozinhas — no aberto, porque um método que ninguém pode copiar é hobby e um método em que o próprio autor não vive é mentira.\n\nMinha vida é a primeira instância: todo projeto que me importa tem um resultado declarado, um estado honesto e um próximo passo. Dois placares, nenhum outro — alinhamento e integridade. Saúde, música, aprendizado e família todos os dias. É uma maratona. Do Rio, no aberto.",
-    "en": "I am a developer-founder committed to making Brazil a protagonist in global technology. I look for the reasons it will work, and I invite the people around me to see life that way too.\n\nI hold that every person should be free to discover and live their greatest potential, and software is my lever. At deco I build digital experiences that run themselves — in the open, because a method nobody can copy is a hobby and a method its author will not live inside is a lie.\n\nMy life is the first instance: every project I care about has a declared outcome, an honest current state, and a next move. Two scores, no others — alignment and integrity. Health, music, learning, and family every day. It is a marathon. From Rio, in the open."
+    "pt-BR": "Meu sucesso contribui para tornar o Brasil um protagonista global em tecnologia. Sou causa na formação de outras empresas globais feitas por Brasileiros. Foco nos motivos para dar certo.\n\nAmplifico a liberdade para ser e agir das pessoas ao meu redor. Combato aqueles que buscam restringir a liberdade dos outros. Sou atento às minhas próprias limitações.\n\nA fonte do meu poder é a serenidade, não a força. A vida é curta demais para estar incompleto. Faço o melhor possível a cada dia.",
+    "en": "My success contributes to making Brazil a global protagonist in technology. I am cause in the founding of other global companies built by Brazilians. I focus on the reasons it will work.\n\nI amplify the freedom to be and to act of the people around me. I stand against those who would restrict the freedom of others. I am attentive to my own limitations.\n\nThe source of my power is serenity, not force. Life is too short to be incomplete. I do the best I can each day."
   },
   "scores": {
     "alignment": {
@@ -104,8 +104,8 @@
       "position": 1,
       "stage": "expansion",
       "title": {
-        "pt-BR": "O Brasil é protagonista em tecnologia global",
-        "en": "Brazil is a protagonist in global technology"
+        "pt-BR": "Sou causa de empresas globais feitas por brasileiros",
+        "en": "I am cause in global companies built by Brazilians"
       },
       "narrative": {
         "pt-BR": "O ecossistema tech brasileiro é vibrante e exportador, e um jovem desenvolvedor daqui enxerga um caminho claro para impacto global sem sair do país. Sou uma das pessoas que tornaram esse caminho legível — pelo que construo, pelo que financio e pelo que digo em público.",
@@ -158,8 +158,8 @@
       "position": 2,
       "stage": "execution",
       "title": {
-        "pt-BR": "Experiências digitais se operam sozinhas, e o método é público",
-        "en": "Digital experiences run themselves, and the method is public"
+        "pt-BR": "Construo experiências digitais que se operam sozinhas, no aberto",
+        "en": "I build digital experiences that run themselves, in the open"
       },
       "narrative": {
         "pt-BR": "A deco torna experiências digitais autônomas — marcas entregam funções inteiras a um colega de time que lembra, trabalha de madrugada e aparece com o trabalho feito. Minha parte não-substituível é sermos reconhecidos globalmente por fazer isso no aberto: os rituais e métodos com que tocamos a empresa são publicados e outras empresas os replicaram.",
@@ -212,8 +212,8 @@
       "position": 3,
       "stage": "distribution",
       "title": {
-        "pt-BR": "O método Future-Driven multiplica pelas empresas de outras pessoas",
-        "en": "The Future-Driven method multiplies through other people's companies"
+        "pt-BR": "Compartilho nossa metodologia de comunicação em alto desempenho com organizações de todos os tamanhos através de experiências agênticas",
+        "en": "I share our high-performance communication methodology with organisations of every size, through agentic experiences"
       },
       "narrative": {
         "pt-BR": "Future-Driven vira currículo padrão em aceleradoras. Empresas o citam como razão de executarem rápido com cultura saudável, e meu portfólio anjo financia ventures que o encarnam. O método viaja sem mim na sala.",
@@ -266,8 +266,8 @@
       "position": 4,
       "stage": "distribution",
       "title": {
-        "pt-BR": "vibegui.com é uma publicação em que as pessoas confiam",
-        "en": "vibegui.com is a publication people rely on"
+        "pt-BR": "Publico todo dia, e quem lê confia no que encontra",
+        "en": "I publish every day, and the people who read it trust what they find"
       },
       "narrative": {
         "pt-BR": "vibegui.com é uma publicação diária sobre liderança com integridade, tecnologia web e agentes de IA. Quando um leitor pega algo importante, aquilo pode virar um artefato bonito e consentido do que mudou e de quais fontes sustentam — artefatos que trazem gente nova sem expor conversa privada.",
@@ -320,8 +320,8 @@
       "position": 5,
       "stage": "content",
       "title": {
-        "pt-BR": "Distinções importantes podem ser pegas em conversa",
-        "en": "Important distinctions can be gotten through conversation"
+        "pt-BR": "Entrego distinções importantes em conversa",
+        "en": "I deliver important distinctions in conversation"
       },
       "narrative": {
         "pt-BR": "Um grafo navegável de distinções sobre liderança, integridade, linguagem de futuro, software, IA e Brasil. Cada uma tem um ensaio claro, suas fontes, seu lugar no grafo e caminhos guiados que criam a possibilidade de uma mudança real de perspectiva — incluindo os livros e as pessoas que me formaram, que é como a biblioteca e as conversas melhoram uma à outra.",
@@ -374,8 +374,8 @@
       "position": 6,
       "stage": "ideas",
       "title": {
-        "pt-BR": "Meus projetos se movem como um portfólio",
-        "en": "My projects move as one portfolio"
+        "pt-BR": "Movo meus projetos como um portfólio só",
+        "en": "I move my projects as a single portfolio"
       },
       "narrative": {
         "pt-BR": "Todo projeto ativo está visível em um mapa, ligado a um resultado explícito e à evidência de que está andando. A distância entre a declaração e a medição é o trabalho.",
@@ -427,8 +427,8 @@
       "id": "relationships",
       "position": 7,
       "title": {
-        "pt-BR": "Conexões importantes não desaparecem",
-        "en": "Important connections do not disappear"
+        "pt-BR": "Mantenho presentes as conexões que importam",
+        "en": "I keep the connections that matter present"
       },
       "narrative": {
         "pt-BR": "Um mapa confiável das pessoas que importam nos diferentes capítulos da minha vida, apoiado em evidência de fontes que eu controlo — porque as pessoas ao meu redor moldam o futuro que eu consigo declarar.",
@@ -480,8 +480,8 @@
       "id": "vitality",
       "position": 8,
       "title": {
-        "pt-BR": "Saúde, música, aprendizado e família acontecem todos os dias",
-        "en": "Health, music, learning, and family happen every day"
+        "pt-BR": "Cuido de saúde, música, aprendizado e família todos os dias",
+        "en": "I tend to health, music, learning, and family every day"
       },
       "narrative": {
         "pt-BR": "O inegociável. Escrita, música, exercício e leitura são uma sequência diária, não o que sobra, e o tempo com a família não é a variável que absorve um trimestre difícil. Nada nesta declaração vale ser alcançado trocando isto.",
@@ -521,8 +521,8 @@
       "id": "order",
       "position": 9,
       "title": {
-        "pt-BR": "Meus arquivos pessoais formam uma biblioteca usável",
-        "en": "My personal files form a usable library"
+        "pt-BR": "Encontro qualquer arquivo meu em um mapa só",
+        "en": "I find any file of mine in one map"
       },
       "narrative": {
         "pt-BR": "Arquivos no Mac, iCloud e Drive pesquisáveis como um mapa privado só, com uma cópia canônica conhecível e toda operação reversível.",

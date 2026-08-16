@@ -3036,10 +3036,16 @@ button.analytics-row:focus-visible .analytics-fill {
   color: rgb(var(--ink));
 }
 
-/* Off-site, so it does not pretend to be a tab. */
+/* Off-site, so it does not pretend to be a tab — but it does share the row, and
+   an anchor next to buttons sits on its own baseline unless it is given the
+   same box. Same padding, same line-height, same everything but the underline. */
 .nav-away {
+  padding: 10px 13px 12px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
   text-decoration: none;
 }
 
