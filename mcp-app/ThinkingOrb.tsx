@@ -141,10 +141,12 @@ export function ThinkingOrb({
       const time = still ? 4 : (now - start) / 1000;
 
       const chosen = activeRef.current;
-      // Resting is deliberately below full, so choosing everything is visibly
-      // brighter than choosing nothing rather than identical to it.
-      const targetOf = (index: number) =>
-        chosen.length === 0 ? 0.62 : chosen.includes(index) ? 1 : 0.3;
+      // Selecting turns one light *up*. It does not turn the others down —
+      // choosing a commitment is not a claim against the other two, and a ring
+      // that dims when you look at part of it reads as a filter rather than as
+      // attention. Resting sits below full so that lighting all three is
+      // visibly brighter than lighting none.
+      const targetOf = (index: number) => (chosen.includes(index) ? 1 : 0.62);
 
       // Exponential approach rather than a jump, and framerate-independent:
       // `1 - e^(-dt/tau)` is the same curve at 120fps or while dropping frames.
