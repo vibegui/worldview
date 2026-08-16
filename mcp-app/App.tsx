@@ -136,6 +136,27 @@ function pathFor(path: string, locale: Locale): string {
 const UI = {
   menu: { "pt-BR": "Menu", en: "Menu" },
   closeMenu: { "pt-BR": "Fechar o menu", en: "Close the menu" },
+  aboutEyebrow: { "pt-BR": "Sobre este lugar", en: "About this place" },
+  aboutTitle: {
+    "pt-BR": "Bem-vindo ao Worldview",
+    en: "Welcome to Worldview",
+  },
+  aboutWhat: {
+    "pt-BR":
+      "O Worldview é onde eu declaro o futuro que estou construindo e organizo o meu trabalho a partir dele. A declaração vem primeiro; os projetos existem para servi-la.",
+    en: "Worldview is where I declare the future I am building and organise my work out of it. The declaration comes first; the projects exist to serve it.",
+  },
+  aboutHow: {
+    "pt-BR":
+      "O que deve ser mora no git e muda por commit, então mudar o meu futuro é uma coisa revisável. O que é mora num banco e é medido. A distância entre os dois é a única pergunta interessante aqui.",
+    en: "What should be lives in git and changes by commit, so changing my future is something reviewable. What is lives in a database and is measured. The distance between the two is the only interesting question here.",
+  },
+  aboutOpen: {
+    "pt-BR":
+      "É open source, e o método também: a declaração e os placares são publicados junto com o código que os serve.",
+    en: "It is open source, and so is the method: the declaration and the scores are published alongside the code that serves them.",
+  },
+  aboutClose: { "pt-BR": "Fechar", en: "Close" },
   declarationTitle: { "pt-BR": "Declaração 2030", en: "Declaration 2030" },
   declarationWhat: {
     "pt-BR": "Declaração de Futuro",
@@ -257,6 +278,7 @@ export function App() {
   // native popover: a popover element is `display: none` until opened, so the
   // desktop nav would have to fight six UA declarations to stay inline.
   const [menuOpen, setMenuOpen] = useState(false);
+  const aboutRef = useRef<HTMLDialogElement>(null);
 
   // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
   const nav = NAV_ITEMS.map((item) => ({
@@ -334,6 +356,17 @@ export function App() {
         >
           {declaration.name ?? "vibegui ⋅ Worldview"}
         </button>
+
+        <button
+          type="button"
+          className="about-open"
+          aria-label={ui("aboutTitle")}
+          onClick={() => aboutRef.current?.showModal()}
+        >
+          <span aria-hidden="true">i</span>
+        </button>
+
+        <AboutDialog ref={aboutRef} locale={locale} />
 
         {/* Phone only, per the stylesheet. The label is spelled out because
             three bars alone is a shape people still have to guess at. */}
@@ -435,6 +468,56 @@ export function App() {
         />
       </section>
     </main>
+  );
+}
+
+const REPO_HREF = "https://github.com/vibegui/worldview";
+
+/**
+ * What this is, for whoever arrived without being told.
+ *
+ * A native `<dialog>` opened with `showModal()`, so the top layer, the inert
+ * background, the Escape key and focus containment are the platform's problem
+ * rather than mine. The only thing added is dismissing on a backdrop click:
+ * clicks on the backdrop land on the dialog element itself, so comparing the
+ * target to the element is the whole test.
+ */
+function AboutDialog({
+  ref,
+  locale,
+}: {
+  ref: React.RefObject<HTMLDialogElement | null>;
+  locale: Locale;
+}) {
+  const text = (key: keyof typeof UI) => UI[key][locale];
+  return (
+    <dialog
+      className="about"
+      ref={ref}
+      onClick={(event) => {
+        if (event.target === ref.current) ref.current?.close();
+      }}
+    >
+      <div className="about-panel">
+        <button
+          type="button"
+          className="about-close"
+          aria-label={text("aboutClose")}
+          onClick={() => ref.current?.close()}
+        >
+          ×
+        </button>
+        <p className="eyebrow">{text("aboutEyebrow")}</p>
+        <h2>{text("aboutTitle")}</h2>
+        <p>{text("aboutWhat")}</p>
+        <p>{text("aboutHow")}</p>
+        <p>{text("aboutOpen")}</p>
+        <a className="about-repo" href={REPO_HREF}>
+          vibegui/worldview
+          <span aria-hidden="true"> ↗</span>
+        </a>
+      </div>
+    </dialog>
   );
 }
 
