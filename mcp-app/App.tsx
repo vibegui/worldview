@@ -46,18 +46,24 @@ const NAV_ITEMS = [
     path: "/",
   },
   {
-    label: { en: "Projects", "pt-BR": "Projetos" },
-    tool: "GET_PORTFOLIO",
-    path: "/projects",
-  },
-  {
-    // Same tool as the declaration, different destination: the scoreboard is
-    // the half of that payload people come back to, and burying it under a
-    // manifesto they have already read makes them scroll past their own words
-    // to reach a number.
+    // Three tabs share GET_DECLARATION. That payload answers three questions and
+    // they are read at different moments — the declaration when you want to
+    // remember what you said, the scoreboard when you want a number, the results
+    // when you want to know whether the game is being played. One page holding
+    // all three meant scrolling past two to reach the one you came for.
     label: { en: "Scoreboard", "pt-BR": "Placar" },
     tool: "GET_DECLARATION",
     path: "/placar",
+  },
+  {
+    label: { en: "Results", "pt-BR": "Resultados" },
+    tool: "GET_DECLARATION",
+    path: "/resultados",
+  },
+  {
+    label: { en: "Projects", "pt-BR": "Projetos" },
+    tool: "GET_PORTFOLIO",
+    path: "/projects",
   },
   {
     label: { en: "Analytics", "pt-BR": "Analytics" },
@@ -91,6 +97,22 @@ const LOCALE_AWARE = ["GET_DECLARATION", "GET_PORTFOLIO", "GET_PROJECT"];
 
 function argsFor(tool: string, locale: Locale): Record<string, unknown> {
   return LOCALE_AWARE.includes(tool) ? { locale } : {};
+}
+
+/**
+ * Which of GET_DECLARATION's three answers this URL is asking for. Read from the
+ * path rather than held in state, because the URL is already the router.
+ */
+type Section = "declaration" | "scoreboard" | "results";
+
+function sectionFromPath(): Section {
+  if (typeof window === "undefined") return "declaration";
+  const here = window.location.pathname
+    .replace(/^\/en/, "")
+    .replace(/\/$/, "");
+  if (here === "/placar") return "scoreboard";
+  if (here === "/resultados") return "results";
+  return "declaration";
 }
 
 function pathFor(path: string, locale: Locale): string {
@@ -487,13 +509,7 @@ function ResultView({
           game?.strategic_results ?? result.strategic_results,
         )}
         scorecard={asRecords(result.scorecard)}
-        only={
-          typeof window !== "undefined" &&
-          window.location.pathname.replace(/^\/en/, "").replace(/\/$/, "") ===
-            "/placar"
-            ? "scoreboard"
-            : "declaration"
-        }
+        only={sectionFromPath()}
       />
     );
   }
@@ -1513,8 +1529,8 @@ function DeclarationView({
   conditions: string[];
   strategicResults: JsonRecord[];
   scorecard: JsonRecord[];
-  /** Which half of this payload to render. Both live behind GET_DECLARATION. */
-  only: "declaration" | "scoreboard";
+  /** Which of the three answers to render. All live behind GET_DECLARATION. */
+  only: Section;
 }) {
   // Which commitments are lit. Empty is the resting state and shows all three;
   // selecting is a filter on the orb, not a claim about the declaration.
@@ -1682,7 +1698,7 @@ function DeclarationView({
       </section>
       )}
 
-      {only === "declaration" && (
+      {only === "results" && (
       <>
       {/* Results live under the commitment they serve, and the work that
           pursues each one sits inside it. Nine flat cards said nothing about
@@ -1725,6 +1741,10 @@ function DeclarationView({
         </div>
       </section>
 
+      </>
+      )}
+
+      {only === "declaration" && (
       <section className="declaration-block conditions">
         <div className="section-heading">
           <div>
@@ -1738,9 +1758,7 @@ function DeclarationView({
           ))}
         </ul>
       </section>
-      </>
       )}
-
     </article>
   );
 }

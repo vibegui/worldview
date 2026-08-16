@@ -40,6 +40,7 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
     "/",
     "/projects",
     "/placar",
+    "/resultados",
     "/analytics",
     "/learning",
     "/bookmarks",
