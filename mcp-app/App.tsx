@@ -134,6 +134,8 @@ function pathFor(path: string, locale: Locale): string {
  * and the worker use.
  */
 const UI = {
+  menu: { "pt-BR": "Menu", en: "Menu" },
+  closeMenu: { "pt-BR": "Fechar o menu", en: "Close the menu" },
   declarationTitle: { "pt-BR": "Declaração 2030", en: "Declaration 2030" },
   aboutMyLife: { "pt-BR": "O que é a minha vida", en: "What my life is about" },
   metricsEyebrow: {
@@ -247,6 +249,10 @@ export function App() {
   const [locale, setLocale] = useState<Locale>(() =>
     STANDALONE ? localeFromPath(window.location.pathname) : "en",
   );
+  // Phones get a hamburger instead of a second header row. State rather than the
+  // native popover: a popover element is `display: none` until opened, so the
+  // desktop nav would have to fight six UA declarations to stay inline.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Inside an MCP host the tool list is not fetched, so nothing is filtered out.
   const nav = NAV_ITEMS.map((item) => ({
@@ -259,6 +265,7 @@ export function App() {
   // The worker serves the same bundle on every path, so routing is entirely the
   // question of which tool to open.
   const open = (tool: string, path?: string, next: Locale = locale) => {
+    setMenuOpen(false);
     const href = path ? pathFor(path, next) : undefined;
     if (STANDALONE && href) {
       if (window.location.pathname !== href) {
@@ -285,6 +292,15 @@ export function App() {
     void callTool(boot, argsFor(boot, locale));
   }, [callTool, connected, nav, toolName]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   // Back and forward move between tabs rather than out of the app.
   useEffect(() => {
     if (!STANDALONE) return;
@@ -307,8 +323,42 @@ export function App() {
           box for everything would put the rule in the wrong place. */}
       <header className="topbar">
         <div className="container topbar-inner">
-        <p className="os-label">{declaration.name ?? "vibegui ⋅ Worldview"}</p>
+        <button
+          type="button"
+          className="os-label"
+          onClick={() => open(nav[0]?.tool ?? "GET_DECLARATION", nav[0]?.path)}
+        >
+          {declaration.name ?? "vibegui ⋅ Worldview"}
+        </button>
 
+        {/* Phone only, per the stylesheet. The label is spelled out because
+            three bars alone is a shape people still have to guess at. */}
+        <button
+          type="button"
+          className="menu-toggle"
+          aria-expanded={menuOpen}
+          aria-controls="worldview-menu"
+          onClick={() => setMenuOpen((was) => !was)}
+        >
+          {ui("menu")}
+          <span className="menu-bars" aria-hidden="true" />
+        </button>
+
+        {menuOpen && (
+          <button
+            type="button"
+            className="menu-scrim"
+            aria-label={ui("closeMenu")}
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
+
+        {/* `display: contents` on a wide screen, so this wrapper only exists as a
+            box when it is the dropdown. */}
+        <div
+          id="worldview-menu"
+          className={`topbar-actions ${menuOpen ? "is-open" : ""}`}
+        >
         <nav className="nav" aria-label="Worldview views">
           {nav.map((item) => (
             <button
@@ -359,6 +409,7 @@ export function App() {
             {connected ? "Private Studio" : "Connecting"}
           </span>
         )}
+        </div>
         </div>
       </header>
 
