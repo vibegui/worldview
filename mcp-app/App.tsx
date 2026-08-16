@@ -193,6 +193,21 @@ const UI = {
     "pt-BR": "Resultado não declarado",
     en: "Outcome not declared",
   },
+  onwardEyebrow: { "pt-BR": "Por onde seguir", en: "Where to go next" },
+  onwardScoreboard: {
+    "pt-BR": "As métricas que confirmam o sucesso, e as condições que fazem valer a pena.",
+    en: "The metrics that confirm success, and the conditions that make it worth it.",
+  },
+  onwardResults: {
+    "pt-BR": "O que tem que ter acontecido, sob cada compromisso, e quanto já andou.",
+    en: "What has to have happened, under each commitment, and how far along it is.",
+  },
+  onwardProjects: {
+    "pt-BR": "O trabalho de verdade apontado para cada promessa — e onde não há nenhum.",
+    en: "The actual work pointed at each promise — and where there is none.",
+  },
+  metricsCount: { "pt-BR": "métricas", en: "metrics" },
+  resultsCount: { "pt-BR": "resultados", en: "results" },
   noProject: {
     "pt-BR": "Nenhum projeto persegue este resultado",
     en: "No project is pursuing this result",
@@ -356,6 +371,7 @@ export function App() {
           toolName={toolName}
           result={asRecord(toolResult)}
           callTool={callTool}
+          navigate={open}
           loading={loading}
           error={error}
           available={available}
@@ -428,6 +444,7 @@ function ResultView({
   toolName,
   result,
   callTool,
+  navigate,
   loading,
   error,
   available,
@@ -435,6 +452,8 @@ function ResultView({
   toolName?: string;
   result: JsonRecord;
   callTool: <T>(name: string, args?: Record<string, unknown>) => Promise<T>;
+  /** Same function the tabs use, so a card and a tab are the same act. */
+  navigate: (tool: string, path?: string) => void;
   loading: boolean;
   error?: string;
   available: string[];
@@ -510,6 +529,7 @@ function ResultView({
         )}
         scorecard={asRecords(result.scorecard)}
         only={sectionFromPath()}
+        navigate={navigate}
       />
     );
   }
@@ -1524,6 +1544,7 @@ function DeclarationView({
   strategicResults,
   scorecard,
   only,
+  navigate,
 }: {
   declaredFuture: string;
   conditions: string[];
@@ -1531,6 +1552,7 @@ function DeclarationView({
   scorecard: JsonRecord[];
   /** Which of the three answers to render. All live behind GET_DECLARATION. */
   only: Section;
+  navigate: (tool: string, path?: string) => void;
 }) {
   // Which commitments are lit. Empty is the resting state and shows all three;
   // selecting is a filter on the orb, not a claim about the declaration.
@@ -1698,6 +1720,75 @@ function DeclarationView({
       </section>
       )}
 
+      {/* Where to go next. The declaration answers "what is this about"; these
+          three answer "and then what", each with the count of what is actually
+          in there so the invitation is specific rather than decorative.
+          Clicking one is the same act as clicking its tab — same function. */}
+      {only === "declaration" && (
+        <nav className="onward" aria-label={ui("onwardEyebrow")}>
+          {[
+            {
+              path: "/placar",
+              label: ui("scorecard"),
+              blurb: ui("onwardScoreboard"),
+              count: scorecard.length,
+              unit: ui("metricsCount"),
+              index: 0,
+            },
+            {
+              path: "/resultados",
+              label: ui("strategicResults"),
+              blurb: ui("onwardResults"),
+              count: strategicResults.length,
+              unit: ui("resultsCount"),
+              index: 1,
+            },
+            {
+              path: "/projects",
+              label: ui("portfolio"),
+              blurb: ui("onwardProjects"),
+              count: new Set(
+                strategicResults.flatMap((result) =>
+                  asRecords(result.projects).map((project) => text(project.id)),
+                ),
+              ).size,
+              unit: ui("projectsCount"),
+              index: 2,
+            },
+          ].map((card) => {
+            const ink = STRAND_INKS[card.index % STRAND_INKS.length]!;
+            return (
+              <button
+                type="button"
+                className="onward-card"
+                key={card.path}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+                onClick={() =>
+                  navigate(
+                    card.path === "/projects"
+                      ? "GET_PORTFOLIO"
+                      : "GET_DECLARATION",
+                    card.path,
+                  )
+                }
+              >
+                <span className="onward-count">
+                  {card.count}
+                  <small>{card.unit}</small>
+                </span>
+                <span className="onward-label">{card.label}</span>
+                <span className="onward-blurb">{card.blurb}</span>
+                <span className="onward-go" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {only === "results" && (
       <>
       {/* Results live under the commitment they serve, and the work that
@@ -1744,7 +1835,7 @@ function DeclarationView({
       </>
       )}
 
-      {only === "declaration" && (
+      {only === "scoreboard" && (
       <section className="declaration-block conditions">
         <div className="section-heading">
           <div>

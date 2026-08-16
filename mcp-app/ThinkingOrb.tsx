@@ -132,7 +132,7 @@ export function ThinkingOrb({
     let previous: number | null = null;
     // Where each strand's brightness actually is, as opposed to where the
     // selection says it should be. Switching sets a target; this chases it.
-    const level = STRAND_INKS.map(() => 0.62);
+    const level = STRAND_INKS.map(() => 0.42);
 
     const draw = (now: number) => {
       if (start === null) start = now;
@@ -146,7 +146,7 @@ export function ThinkingOrb({
       // that dims when you look at part of it reads as a filter rather than as
       // attention. Resting sits below full so that lighting all three is
       // visibly brighter than lighting none.
-      const targetOf = (index: number) => (chosen.includes(index) ? 1 : 0.62);
+      const targetOf = (index: number) => (chosen.includes(index) ? 1 : 0.42);
 
       // Exponential approach rather than a jump, and framerate-independent:
       // `1 - e^(-dt/tau)` is the same curve at 120fps or while dropping frames.

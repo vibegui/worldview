@@ -3078,3 +3078,105 @@ button.analytics-row:focus-visible .analytics-fill {
   letter-spacing: -0.01em;
   color: var(--text);
 }
+
+/* ---------- where to go next ---------- */
+/* Three invitations, each carrying the count of what is behind it. Vertical
+   rather than a row of equal boxes: the number leads, the name follows, and the
+   sentence explains — reading order is the design. */
+.onward {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: clamp(2rem, 5vh, 3.5rem);
+}
+
+.onward-card {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  padding: 1.4rem 1.3rem 1.2rem;
+  border: 1px solid rgb(var(--ink) / 0.28);
+  border-radius: 16px;
+  background: linear-gradient(
+    170deg,
+    rgb(var(--ink) / 0.09),
+    transparent 62%
+  );
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onward-card:hover {
+  border-color: rgb(var(--ink) / 0.75);
+  background: linear-gradient(170deg, rgb(var(--ink) / 0.16), transparent 62%);
+  box-shadow: 0 0 34px -10px rgb(var(--ink) / 0.6);
+  transform: translateY(-2px);
+}
+
+.onward-card:focus-visible {
+  outline: 2px solid rgb(var(--ink));
+  outline-offset: 3px;
+}
+
+.onward-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: rgb(var(--ink));
+  font-variant-numeric: tabular-nums;
+}
+
+.onward-count small {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.onward-label {
+  font-family: var(--font-sans);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}
+
+.onward-blurb {
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.onward-go {
+  margin-top: 0.35rem;
+  color: rgb(var(--ink));
+  font-size: 1rem;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onward-card:hover .onward-go {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onward-card,
+  .onward-go {
+    transition: none;
+  }
+  .onward-card:hover {
+    transform: none;
+  }
+}
