@@ -20,7 +20,13 @@ export interface WorldviewConfig extends WorldviewInput {
    * What the browser tab says. An instance is somebody's site, so it owns its
    * own title, icon, and description rather than advertising the engine.
    */
-  site?: { title?: string; description?: string; favicon?: string };
+  site?: {
+    title?: string;
+    description?: string;
+    favicon?: string;
+    /** Whose declaration this is. Rendered under the masthead title. */
+    author?: string;
+  };
   /**
    * Published writing as prior art: "have I already said this?". Omit and the
    * three public writing tools do not exist.

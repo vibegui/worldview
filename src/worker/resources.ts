@@ -76,6 +76,13 @@ export function appHtml(
   // Names and titles only: the app calls GET_DECLARATION for the rest.
   const declaration = {
     name: t(env.worldview.name, locale),
+    author: env.site?.author,
+    // The masthead is the first paint. Fetching it would mean the page opens
+    // with an empty headline and fills in, which is exactly the impression a
+    // declaration should not make.
+    commitments: (env.worldview.commitments ?? []).map((commitment) =>
+      t(commitment, locale),
+    ),
     // Resolved here rather than shipped as both languages: the worker already
     // knows which URL it is answering, and a card that renders "[object Object]"
     // is what happens when a localized field escapes to the client unresolved.

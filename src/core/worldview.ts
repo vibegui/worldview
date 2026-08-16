@@ -77,6 +77,11 @@ export interface WorldviewDeclaration {
       };
     };
   };
+  /**
+   * The three a reader should be able to repeat back. Distinct from integrity's
+   * `word` domain, which is the full ledger — these are the headline.
+   */
+  commitments?: LocalizedText[];
   conditionsOfSatisfaction: LocalizedText[];
   strategicResults: WorldviewStrategicResult[];
 }

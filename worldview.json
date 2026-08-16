@@ -1,10 +1,10 @@
 {
   "version": 1,
   "instance": "vibegui",
-  "name": "Worldview",
+  "name": "vibegui — worldview",
   "declaredFuture": {
-    "pt-BR": "Sou um desenvolvedor-fundador comprometido em tornar o Brasil protagonista em tecnologia global. Foco nos motivos para dar certo e convido quem está ao meu redor a ver a vida assim também.\n\nDefendo que toda pessoa tenha liberdade para descobrir e viver seu maior potencial; o software é minha alavanca para acelerar esse direito. Na deco, construo experiências digitais que se operam sozinhas — e busco ser reconhecido por fazer isso no aberto, porque um método que ninguém pode copiar é hobby, e um método em que o próprio autor não vive é mentira.\n\nMinha própria vida é a primeira instância. Todo projeto que me importa tem um lugar no todo: um resultado declarado, um estado atual honesto, uma memória e um próximo passo que posso dar hoje. As pessoas que importam seguem presentes, com contexto real o suficiente para eu saber quando reconectar, oferecer ajuda ou pedir. Os livros, pessoas e projetos que me formaram são uma biblioteca viva em vez de uma pilha de conteúdo, e meus arquivos são encontráveis em vez de espalhados por três drives. As distinções que eu queria ter tido aos 25 estão disponíveis numa conversa que chega.\n\nPratico e prego serenidade, integridade e aprendizado contínuo, vivendo os princípios de Liderança e Linguagem de Futuro no dia a dia. Tenho o privilégio de conviver com pessoas melhores e mais inteligentes que eu, que me desafiam todos os dias.\n\nMeus compromissos, internos e externos:\n🌀 Sou sereno e poderoso.\n⭐️ Sempre faço o meu melhor.\n💚 Sou impecável com a minha palavra.\n🔮 Respeito o unknown unknown.\n❓ Evito assumir e faço perguntas.\n⚽️ Escolho a interpretação que me dá poder.\n\nDois placares, nenhum outro: alinhamento e integridade. Alinhamento: o que estou fazendo serve o futuro que declarei. Integridade: está inteiro e completo — minha palavra, meus sistemas, meus objetos. Todo o resto é maquinário, e maquinário vem depois.\n\nSaúde, música, aprendizado e família todos os dias. É uma maratona. Do Rio, no aberto.",
-    "en": "I am a developer-founder committed to making Brazil a protagonist in global technology. I look for the reasons it will work, and I invite the people around me to see life that way too.\n\nI hold that every person should be free to discover and live their greatest potential; software is my lever for accelerating that right. At deco I build digital experiences that run themselves — and I mean to be known for doing it in the open, because a method nobody can copy is a hobby and a method its author will not live inside is a lie.\n\nMy own life is the first instance. Every project I care about has a place in the whole: a declared outcome, an honest current state, a memory, and a next move I can make today. The people who matter stay present, with enough real context to know when to reconnect, offer help, or ask for it. The books, people, and projects that shaped me are a living library instead of a pile of content, and my files are findable instead of scattered across three drives. The distinctions I wish I'd had at 25 are available through a conversation that lands.\n\nI practice and preach serenity, integrity, and continuous learning, living the principles of Leadership and Future-Based Language day to day. I have the privilege of being surrounded by people better and smarter than me, who challenge me every day.\n\nMy commitments, internal and external:\n🌀 Sou sereno e poderoso.\n⭐️ Sempre faço o meu melhor.\n💚 Sou impecável com a minha palavra.\n🔮 Respeito o unknown unknown.\n❓ Evito assumir e faço perguntas.\n⚽️ Escolho a interpretação que me dá poder.\n\nTwo scores, no others: alignment and integrity. Alignment: does what I am doing serve the future I declared. Integrity: is it whole and complete — my word, my systems, my objects. Everything else is machinery, and machinery follows.\n\nHealth, music, learning, and family every day. It is a marathon. From Rio, in the open."
+    "pt-BR": "Sou um desenvolvedor-fundador comprometido em tornar o Brasil protagonista em tecnologia global. Foco nos motivos para dar certo e convido quem está ao meu redor a ver a vida assim também.\n\nDefendo que toda pessoa tenha liberdade para descobrir e viver seu maior potencial, e software é minha alavanca. Na deco, construo experiências digitais que se operam sozinhas — no aberto, porque um método que ninguém pode copiar é hobby e um método em que o próprio autor não vive é mentira.\n\nMinha vida é a primeira instância: todo projeto que me importa tem um resultado declarado, um estado honesto e um próximo passo. Dois placares, nenhum outro — alinhamento e integridade. Saúde, música, aprendizado e família todos os dias. É uma maratona. Do Rio, no aberto.",
+    "en": "I am a developer-founder committed to making Brazil a protagonist in global technology. I look for the reasons it will work, and I invite the people around me to see life that way too.\n\nI hold that every person should be free to discover and live their greatest potential, and software is my lever. At deco I build digital experiences that run themselves — in the open, because a method nobody can copy is a hobby and a method its author will not live inside is a lie.\n\nMy life is the first instance: every project I care about has a declared outcome, an honest current state, and a next move. Two scores, no others — alignment and integrity. Health, music, learning, and family every day. It is a marathon. From Rio, in the open."
   },
   "scores": {
     "alignment": {
@@ -560,6 +560,20 @@
           }
         }
       ]
+    }
+  ],
+  "commitments": [
+    {
+      "pt-BR": "Liberdade para ser e agir",
+      "en": "Freedom to be and to act"
+    },
+    {
+      "pt-BR": "Brasil protagonista em Tecnologia",
+      "en": "Brazil, a protagonist in technology"
+    },
+    {
+      "pt-BR": "Poder é sereno",
+      "en": "Power is serene"
     }
   ]
 }

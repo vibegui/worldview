@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { BookmarksView, isBookmarkTool } from "./bookmarks/BookmarksView";
+import { ThinkingOrb } from "./ThinkingOrb";
 import { useMcp } from "./mcp";
 
 const globals = (typeof window !== "undefined" ? window : {}) as {
@@ -7,6 +8,8 @@ const globals = (typeof window !== "undefined" ? window : {}) as {
   __WORLDVIEW__?: {
     name?: string;
     results?: Record<string, string>;
+    commitments?: string[];
+    author?: string;
   };
 };
 
@@ -36,7 +39,7 @@ type JsonRecord = Record<string, unknown>;
 // public frontend that drifts from this one.
 const NAV_ITEMS = [
   {
-    label: { en: "Declaration", "pt-BR": "Declaração" },
+    label: { en: "Declaration 2030", "pt-BR": "Declaração 2030" },
     tool: "GET_DECLARATION",
     path: "/",
   },
@@ -101,6 +104,7 @@ function pathFor(path: string, locale: Locale): string {
  * and the worker use.
  */
 const UI = {
+  declarationTitle: { "pt-BR": "Declaração 2030", en: "Declaration 2030" },
   aboutMyLife: { "pt-BR": "O que é a minha vida", en: "What my life is about" },
   metricsEyebrow: {
     "pt-BR": "Métricas que confirmam o sucesso",
@@ -241,7 +245,7 @@ export function App() {
           box for everything would put the rule in the wrong place. */}
       <header className="topbar">
         <div className="container topbar-inner">
-        <p className="os-label">{declaration.name ?? "Worldview"}</p>
+        <p className="os-label">{declaration.name ?? "vibegui — worldview"}</p>
 
         <nav className="nav" aria-label="Worldview views">
           {nav.map((item) => (
@@ -1418,26 +1422,50 @@ function DeclarationView({
   // charter" — a product charter from an older cycle, quietly contradicting the
   // one above it.
   const statement = declaredFuture;
+  const commitments = declaration.commitments ?? [];
   const alignment = asNullableRecord(scores?.alignment);
   const integrity = asNullableRecord(scores?.integrity);
 
   return (
     <article className="declaration">
-      {/* The two questions that matter share the first screen: what my life is
-          about on the left, whether I am playing it well on the right. The
-          scores used to sit below a full-width charter, which put the only
-          numbers in the system under a fold. */}
-      <div className="declaration-hero">
+      {/* The opening spread. Type on the left, the orb on the right, and the
+          three commitments under the name where a standfirst would go — they are
+          the part a reader should be able to repeat back. Asymmetric, because a
+          cover leans. */}
+      <header className="masthead">
+        <div className="masthead-type">
+          <h1>
+            <span>{ui("declarationTitle")}</span>
+            <span className="masthead-rule" aria-hidden="true" />
+            <span className="masthead-author">
+              {declaration.author ?? "Guilherme Rodrigues"}
+            </span>
+          </h1>
+          {commitments.length > 0 && (
+            <ol className="commitments">
+              {commitments.map((commitment, index) => (
+                <li key={commitment}>
+                  <span className="commitment-index" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {commitment}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <div className="masthead-orb">
+          <ThinkingOrb size={360} />
+        </div>
+      </header>
+
       <section className="charter-card">
-        <p className="eyebrow">{ui("aboutMyLife")}</p>
         {statement.split("\n\n").map((paragraph) => (
           <p className="charter-statement" key={paragraph.slice(0, 40)}>
             {cleanMarkdown(paragraph)}
           </p>
         ))}
       </section>
-
-      </div>
 
       {/* The scorecard, not the scores. A number with a target next to it is
           something to act on this week; the two scores are a summary of these

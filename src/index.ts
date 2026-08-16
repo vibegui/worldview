@@ -42,9 +42,10 @@ export default createWorker({
   ]),
 
   site: {
-    title: "Worldview",
+    title: "vibegui — worldview",
+    author: "Guilherme Rodrigues",
     description:
-      "What my life is about, what game I am playing, and whether I am playing it well.",
+      "Declaração 2030 — o que a minha vida é sobre, que jogo eu estou jogando, e se estou jogando bem.",
   },
 
   // Reading the blog, not being it. vibegui.com is a Pages deployment that owns
