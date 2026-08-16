@@ -3,8 +3,8 @@
   "instance": "vibegui",
   "name": "vibegui ⋅ Worldview",
   "declaredFuture": {
-    "pt-BR": "Meu sucesso contribui para tornar o Brasil um protagonista global em tecnologia. Sou causa no sucesso de outras empresas globais Brasileiras. Foco nos motivos para dar certo.\n\nAmplifico a liberdade para ser e agir das pessoas ao meu redor. Combato aqueles que buscam restringir a liberdade dos outros. Sou atento às minhas próprias limitações.\n\nA fonte do meu poder é a serenidade do futuro poderoso, não a força da sobrevivência. A vida é curta demais para estar incompleto. Faço o melhor possível a cada dia.",
-    "en": "My success contributes to making Brazil a global protagonist in technology. I am cause in the success of other global Brazilian companies. I focus on the reasons it will work.\n\nI amplify the freedom to be and to act of the people around me. I stand against those who would restrict the freedom of others. I am attentive to my own limitations.\n\nThe source of my power is the serenity of a powerful future, not the force of survival. Life is too short to be incomplete. I do the best I can each day."
+    "pt-BR": "Meu sucesso contribui para tornar o Brasil um protagonista global em tecnologia. Sou causa no sucesso de outras empresas globais Brasileiras. Foco nos motivos para dar certo.\n\nAmplifico a liberdade para ser e agir das pessoas ao meu redor. Combato aqueles que buscam restringir a liberdade dos outros. Sou atento às minhas próprias limitações.\n\nA fonte do meu poder é a serenidade do futuro poderoso. A vida é curta demais para estar incompleto. Faço o melhor possível a cada dia.",
+    "en": "My success contributes to making Brazil a global protagonist in technology. I am cause in the success of other global Brazilian companies. I focus on the reasons it will work.\n\nI amplify the freedom to be and to act of the people around me. I stand against those who would restrict the freedom of others. I am attentive to my own limitations.\n\nThe source of my power is the serenity of a powerful future. Life is too short to be incomplete. I do the best I can each day."
   },
   "scores": {
     "alignment": {
@@ -162,12 +162,12 @@
       "position": 2,
       "stage": "execution",
       "title": {
-        "pt-BR": "Construo experiências digitais que se operam sozinhas, no aberto",
-        "en": "I build digital experiences that run themselves, in the open"
+        "pt-BR": "Construo uma software factory agêntica open source brasileira",
+        "en": "I build a Brazilian open-source agentic software factory"
       },
       "narrative": {
-        "pt-BR": "A deco torna experiências digitais autônomas — marcas entregam funções inteiras a um colega de time que lembra, trabalha de madrugada e aparece com o trabalho feito. Minha parte não-substituível é sermos reconhecidos globalmente por fazer isso no aberto: os rituais e métodos com que tocamos a empresa são publicados e outras empresas os replicaram.",
-        "en": "deco makes digital experiences autonomous — brands hand whole functions to a teammate that remembers, works overnight, and shows up with the work done. My non-substitutable part is that we are globally recognized for doing it in the open: the rituals and operating methods we run the company with are published and other companies have replicated them."
+        "pt-BR": "A deco torna experiências digitais autônomas — marcas entregam funções inteiras a um colega de time que lembra, trabalha de madrugada e aparece com o trabalho feito. É construída no aberto e no Brasil: os rituais e métodos com que tocamos a empresa são publicados, e outras empresas os replicaram.",
+        "en": "deco makes digital experiences autonomous — brands hand whole functions to a teammate that remembers, works overnight, and shows up with the work done. It is built in the open and in Brazil: the rituals and methods we run the company with are published, and other companies have replicated them."
       },
       "acceptanceCriteria": [
         {
@@ -212,62 +212,8 @@
       "commitment": "brasil"
     },
     {
-      "id": "multiplication",
-      "position": 3,
-      "stage": "distribution",
-      "title": {
-        "pt-BR": "Compartilho nossa metodologia de comunicação em alto desempenho com organizações de todos os tamanhos através de experiências agênticas",
-        "en": "I share our high-performance communication methodology with organisations of every size, through agentic experiences"
-      },
-      "narrative": {
-        "pt-BR": "Future-Driven vira currículo padrão em aceleradoras. Empresas o citam como razão de executarem rápido com cultura saudável, e meu portfólio anjo financia ventures que o encarnam. O método viaja sem mim na sala.",
-        "en": "Future-Driven becomes standard curriculum in accelerators. Companies cite it as the reason they execute fast with a healthy culture, and my angel portfolio funds ventures that embody it. The method travels without me in the room."
-      },
-      "acceptanceCriteria": [
-        {
-          "pt-BR": "Pessoas rodam um ciclo Future-Driven completo sem eu facilitar",
-          "en": "People run a full Future-Driven cycle without me facilitating it"
-        },
-        {
-          "pt-BR": "Uma aceleradora ou empresa o ensina a partir dos próprios materiais",
-          "en": "An accelerator or company teaches it from its own materials"
-        },
-        {
-          "pt-BR": "O formato da declaração é algo que um estranho consegue pegar e usar",
-          "en": "The declaration format is something a stranger can pick up and use"
-        }
-      ],
-      "metrics": [
-        {
-          "id": "future-driven-orgs",
-          "label": {
-            "pt-BR": "Organizações que rodaram um ciclo",
-            "en": "Organizations that ran a cycle"
-          },
-          "target": 25,
-          "unit": {
-            "pt-BR": "organizações",
-            "en": "organizations"
-          }
-        },
-        {
-          "id": "maintainers",
-          "label": {
-            "pt-BR": "Facilitadores independentes",
-            "en": "Independent facilitators"
-          },
-          "target": 3,
-          "unit": {
-            "pt-BR": "pessoas",
-            "en": "people"
-          }
-        }
-      ],
-      "commitment": "brasil"
-    },
-    {
       "id": "expression",
-      "position": 4,
+      "position": 3,
       "stage": "distribution",
       "title": {
         "pt-BR": "Publico todo dia, e quem lê confia no que encontra",
@@ -321,15 +267,15 @@
     },
     {
       "id": "understanding",
-      "position": 5,
+      "position": 4,
       "stage": "content",
       "title": {
-        "pt-BR": "Entrego distinções importantes em conversa",
-        "en": "I deliver important distinctions in conversation"
+        "pt-BR": "Entrego distinções importantes em conversa, e a metodologia viaja sem mim",
+        "en": "I deliver important distinctions in conversation, and the methodology travels without me"
       },
       "narrative": {
-        "pt-BR": "Um grafo navegável de distinções sobre liderança, integridade, linguagem de futuro, software, IA e Brasil. Cada uma tem um ensaio claro, suas fontes, seu lugar no grafo e caminhos guiados que criam a possibilidade de uma mudança real de perspectiva — incluindo os livros e as pessoas que me formaram, que é como a biblioteca e as conversas melhoram uma à outra.",
-        "en": "A navigable graph of distinctions across leadership, integrity, future-based language, software, AI, and Brazil. Each one has a clear essay, its sources, its place in the graph, and guided paths that create the possibility of a genuine change in perspective — including the books and people that shaped me, which is how the library and the conversations improve each other."
+        "pt-BR": "Um grafo navegável de distinções sobre liderança, integridade, linguagem de futuro, software, IA e Brasil, entregues por experiências agênticas em vez de por mim numa sala. Quando isso funciona, uma aceleradora ensina o método a partir dos próprios materiais e eu não estou presente.",
+        "en": "A navigable graph of distinctions across leadership, integrity, future-based language, software, AI, and Brazil, delivered through agentic experiences rather than by me in a room. When it works, an accelerator teaches the method from its own materials and I am not there."
       },
       "acceptanceCriteria": [
         {
@@ -341,8 +287,8 @@
           "en": "Twenty books or primary sources are mapped to those distinctions"
         },
         {
-          "pt-BR": "Caminhos repetíveis que ajudam alguém a pegar uma distinção são identificados no uso real",
-          "en": "Repeatable paths that help someone get a distinction are identified from real use"
+          "pt-BR": "Uma aceleradora ou empresa ensina o método a partir dos próprios materiais",
+          "en": "An accelerator or company teaches the method from its own materials"
         }
       ],
       "metrics": [
@@ -369,13 +315,25 @@
             "pt-BR": "fontes",
             "en": "sources"
           }
+        },
+        {
+          "id": "future-driven-orgs",
+          "label": {
+            "pt-BR": "Organizações que rodaram um ciclo",
+            "en": "Organizations that ran a cycle"
+          },
+          "target": 25,
+          "unit": {
+            "pt-BR": "organizações",
+            "en": "organizations"
+          }
         }
       ],
       "commitment": "liberdade"
     },
     {
       "id": "agency",
-      "position": 6,
+      "position": 5,
       "stage": "ideas",
       "title": {
         "pt-BR": "Movo meus projetos como um portfólio só",
@@ -429,7 +387,7 @@
     },
     {
       "id": "relationships",
-      "position": 7,
+      "position": 6,
       "title": {
         "pt-BR": "Mantenho presentes as conexões que importam",
         "en": "I keep the connections that matter present"
@@ -482,7 +440,7 @@
     },
     {
       "id": "vitality",
-      "position": 8,
+      "position": 7,
       "title": {
         "pt-BR": "Cuido de saúde, música, aprendizado e família todos os dias",
         "en": "I tend to health, music, learning, and family every day"
@@ -523,7 +481,7 @@
     },
     {
       "id": "order",
-      "position": 9,
+      "position": 8,
       "title": {
         "pt-BR": "Encontro qualquer arquivo meu em um mapa só",
         "en": "I find any file of mine in one map"

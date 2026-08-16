@@ -4,7 +4,7 @@ name: Worldview
 repo: vibegui/worldview
 lifecycle: active
 public: true
-serves: [agency, multiplication]
+serves: [agency, understanding]
 ---
 
 **Espírito:** Um marcador de pontos sem mãos.

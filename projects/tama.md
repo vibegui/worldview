@@ -4,7 +4,7 @@ name: Tama
 repo: decocms/tama
 lifecycle: active
 public: true
-serves: [vitality, multiplication]
+serves: [vitality, understanding]
 ---
 
 **Espírito:** Um agente para o seu bicho viver melhor.

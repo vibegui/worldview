@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,18 +12,6 @@
       href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Literata:opsz,wght@7..72,400;500;600&display=swap"
     />
 
-    <!-- Set before first paint, or the page flashes light then goes dark. Dark
-         is the default, matching vibegui.com; an MCP host overrides both via
-         its own theme variables. -->
-    <script>
-      (function () {
-        var stored = localStorage.getItem("theme");
-        document.documentElement.setAttribute(
-          "data-theme",
-          stored === "light" || stored === "dark" ? stored : "dark",
-        );
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

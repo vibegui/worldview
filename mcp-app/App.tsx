@@ -342,8 +342,6 @@ export function App() {
           />
         )}
 
-        {STANDALONE && <ThemeToggle />}
-
         {STANDALONE ? (
           signedIn && (
             <form method="post" action="/logout">
@@ -410,33 +408,6 @@ function LanguageSwitch({
         </span>
       ))}
     </p>
-  );
-}
-
-/**
- * Light and dark, remembered. The same control and the same storage key as
- * vibegui.com, so a reader who set a preference on one keeps it on the other.
- * Hidden inside an MCP host, where the host owns the theme.
- */
-function ThemeToggle() {
-  const [theme, setTheme] = useState(
-    () => document.documentElement.dataset.theme ?? "dark",
-  );
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  return (
-    <button
-      type="button"
-      className="theme-toggle"
-      aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-    >
-      {theme === "dark" ? "☀" : "☾"}
-    </button>
   );
 }
 
