@@ -399,6 +399,16 @@ export async function getPortfolio(
     stateRows.results.map((row) => [String(row.id), row]),
   );
   const rank: Record<string, number> = { active: 0, draft: 1, archived: 3 };
+  // Which commitment a project sits under: the one its *primary* result serves.
+  // `serves` is ordered, primary first, and a project that genuinely spans two
+  // commitments still has to be filed somewhere — filing it by the result its
+  // author put first is the only ordering the declaration actually states.
+  const commitmentOf = new Map(
+    env.worldview.strategicResults.map((result) => [
+      result.id,
+      result.commitment ?? null,
+    ]),
+  );
 
   const visible = publicOnly
     ? env.projects.filter((project) => project.isPublic)
@@ -420,6 +430,7 @@ export async function getPortfolio(
         // Many-to-many: real work serves more than one result, and forcing a
         // single choice would make alignment lie by omission.
         serves: declared.serves,
+        commitment: commitmentOf.get(declared.serves[0] ?? "") ?? null,
         lifecycle,
         position: state?.position ?? null,
         next_review: state?.next_review ?? declared.initialNextReview ?? null,

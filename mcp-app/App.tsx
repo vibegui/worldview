@@ -25,6 +25,7 @@ const STANDALONE = globals.__STANDALONE__ === true;
  */
 const declaration = globals.__WORLDVIEW__ ?? {};
 const resultTitles: Record<string, string> = declaration.results ?? {};
+const COMMITMENTS = declaration.commitments ?? [];
 
 type JsonRecord = Record<string, unknown>;
 
@@ -166,6 +167,11 @@ const UI = {
     en: "Set an honest assessment",
   },
   notMeasured: { "pt-BR": "Ainda não medido", en: "Not yet measured" },
+  currentOutcome: { "pt-BR": "Resultado atual", en: "Current outcome" },
+  outcomeMissing: {
+    "pt-BR": "Resultado não declarado",
+    en: "Outcome not declared",
+  },
   noProject: {
     "pt-BR": "Nenhum projeto persegue este resultado",
     en: "No project is pursuing this result",
@@ -474,7 +480,6 @@ function ResultView({
   ) {
     const about = asNullableRecord(result.what_my_life_is_about);
     const game = asNullableRecord(result.what_game_i_am_playing);
-    const scores = asNullableRecord(result.am_i_playing_it_well);
     return (
       <DeclarationView
         declaredFuture={text(about?.declared_future)}
@@ -482,9 +487,7 @@ function ResultView({
         strategicResults={asRecords(
           game?.strategic_results ?? result.strategic_results,
         )}
-        scores={scores}
         scorecard={asRecords(result.scorecard)}
-        diagnostics={asRecords(result.diagnostics)}
         only={
           typeof window !== "undefined" &&
           window.location.pathname.replace(/^\/en/, "").replace(/\/$/, "") ===
@@ -529,6 +532,9 @@ function PortfolioView({
   // Its empty state still says "prepare the current evidence", which is an
   // instruction to an owner who is not here.
   const operational = "daily_brief" in result;
+  const orphans = projects.filter(
+    (project) => !COMMITMENTS.some(({ id }) => text(project.commitment) === id),
+  );
 
   return (
     <>
@@ -561,7 +567,9 @@ function PortfolioView({
       <div className="section-heading">
         <div>
           <p className="eyebrow">{ui("portfolio")}</p>
-          <h2>\n            {projects.length} {ui("projectsCount")}\n          </h2>
+          <h2>
+            {projects.length} {ui("projectsCount")}
+          </h2>
         </div>
       </div>
 
@@ -574,64 +582,127 @@ function PortfolioView({
           }
         />
       ) : (
-        <div className="project-list">
-          {projects.map((project) => (
-            // GET_PROJECT is private, so publicly a card is a card, not a link
-            // into a detail view that would answer with "Unknown tool".
-            <button
-              type="button"
-              className={`project-card ${operational ? "" : "static"}`}
-              key={text(project.id)}
-              disabled={!operational}
-              onClick={
-                operational ? () => openProject(text(project.id)) : undefined
-              }
-            >
-              <div className="project-identity">
-                <div className="project-title">
-                  <span className={`lifecycle ${text(project.lifecycle)}`}>
-                    {text(project.lifecycle)}
+        /* Grouped by the commitment each project's primary result serves, so
+           the map answers "what am I doing about this promise" rather than
+           listing everything and leaving the reader to sort it out. */
+        <div className="portfolio-groups">
+          {COMMITMENTS.map((commitment, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const mine = projects.filter(
+              (project) => text(project.commitment) === commitment.id,
+            );
+            if (!mine.length) return null;
+            return (
+              <section
+                className="portfolio-group"
+                key={commitment.id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
                   </span>
-                  <h3>{text(project.name)}</h3>
+                  {commitment.label}
+                </h3>
+                <div className="project-list">
+                  {mine.map((project) => (
+                    <ProjectCard
+                      key={text(project.id)}
+                      project={project}
+                      operational={operational}
+                      openProject={openProject}
+                    />
+                  ))}
                 </div>
-                {/* The declared result this project pursues. Saying so when
-                    there is none is the point — that project is why alignment
-                    is not 100%. */}
-                <p
-                  className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
-                >
-                  {asStrings(project.serves).length
-                    ? `${ui("serves")} · ${asStrings(project.serves)
-                        .map((id) => resultTitles[id] ?? id)
-                        .join(" · ")}`
-                    : ui("servesNothing")}
-                </p>
-                <p className="spirit">
-                  {text(project.spirit) || text(project.description)}
-                </p>
-                {operational && (
-                  <footer>
-                    <span>\n                      {number(project.active_goal_count)} {ui("activeGoals")}\n                    </span>
-                    <span>
-                      {number(project.open_work_item_count)} {ui("openItems")}
-                    </span>
-                    <span>{relativeTime(project.last_activity_at)}</span>
-                  </footer>
-                )}
+              </section>
+            );
+          })}
+          {/* A project whose primary result names no commitment would be filed
+              nowhere and vanish from its own map. */}
+          {orphans.length > 0 && (
+            <section className="portfolio-group">
+              <h3>{ui("servesNothing")}</h3>
+              <div className="project-list">
+                {orphans.map((project) => (
+                  <ProjectCard
+                    key={text(project.id)}
+                    project={project}
+                    operational={operational}
+                    openProject={openProject}
+                  />
+                ))}
               </div>
-              <div className="project-outcome">
-                <span className="project-label">Current outcome</span>
-                <p>{text(project.current_outcome) || "Outcome not declared"}</p>
-              </div>
-              <ProjectProgress project={project} />
-              <span className="project-arrow" aria-hidden="true">
-                →
-              </span>
-            </button>
-          ))}
+            </section>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+/** One project, in the map. Two groups render it, so it is its own component. */
+function ProjectCard({
+  project,
+  operational,
+  openProject,
+}: {
+  project: JsonRecord;
+  operational: boolean;
+  openProject: (id: string) => void;
+}) {
+  return (
+    // GET_PROJECT is private, so publicly a card is a card, not a link into a
+    // detail view that would answer with "Unknown tool".
+    <button
+      type="button"
+      className={`project-card ${operational ? "" : "static"}`}
+      disabled={!operational}
+      onClick={operational ? () => openProject(text(project.id)) : undefined}
+    >
+      <div className="project-identity">
+        <div className="project-title">
+          <span className={`lifecycle ${text(project.lifecycle)}`}>
+            {text(project.lifecycle)}
+          </span>
+          <h3>{text(project.name)}</h3>
+        </div>
+        {/* The declared results this project pursues. Saying so when there are
+            none is the point — that project is why alignment is not 100%. */}
+        <p
+          className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
+        >
+          {asStrings(project.serves).length
+            ? `${ui("serves")} · ${asStrings(project.serves)
+                .map((id) => resultTitles[id] ?? id)
+                .join(" · ")}`
+            : ui("servesNothing")}
+        </p>
+        <p className="spirit">
+          {text(project.spirit) || text(project.description)}
+        </p>
+        {operational && (
+          <footer>
+            <span>
+              {number(project.active_goal_count)} {ui("activeGoals")}
+            </span>
+            <span>
+              {number(project.open_work_item_count)} {ui("openItems")}
+            </span>
+            <span>{relativeTime(project.last_activity_at)}</span>
+          </footer>
+        )}
+      </div>
+      <div className="project-outcome">
+        <span className="project-label">{ui("currentOutcome")}</span>
+        <p>{text(project.current_outcome) || ui("outcomeMissing")}</p>
+      </div>
+      <ProjectProgress project={project} />
+      <span className="project-arrow" aria-hidden="true">
+        →
+      </span>
+    </button>
   );
 }
 
@@ -1433,21 +1504,16 @@ function DeclarationView({
   declaredFuture,
   conditions,
   strategicResults,
-  scores,
   scorecard,
-  diagnostics,
   only,
 }: {
   declaredFuture: string;
   conditions: string[];
   strategicResults: JsonRecord[];
-  scores: JsonRecord | null;
   scorecard: JsonRecord[];
-  diagnostics: JsonRecord[];
   /** Which half of this payload to render. Both live behind GET_DECLARATION. */
   only: "declaration" | "scoreboard";
 }) {
-  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
   // Which commitments are lit. Empty is the resting state and shows all three;
   // selecting is a filter on the orb, not a claim about the declaration.
   const [lit, setLit] = useState<number[]>([]);
@@ -1463,8 +1529,6 @@ function DeclarationView({
   // under, so it stays below as plain prose rather than being dropped.
   const paragraphs = declaredFuture.split("\n\n").filter(Boolean);
   const commitments = declaration.commitments ?? [];
-  const alignment = asNullableRecord(scores?.alignment);
-  const integrity = asNullableRecord(scores?.integrity);
   // Every paragraph is always in the document. Revealing toggles opacity, never
   // mounting, so the block reserves its full height from the first paint and
   // nothing below it ever moves — a declaration that shoves the page around as
@@ -1675,75 +1739,6 @@ function DeclarationView({
       </>
       )}
 
-      {only === "scoreboard" && (
-      <section className="declaration-block">
-        <button
-          type="button"
-          className="charter-toggle"
-          aria-expanded={diagnosticsExpanded}
-          onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
-        >
-          {diagnosticsExpanded
-            ? ui("hideScores")
-            : ui("showScores")}
-          <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
-        </button>
-        {diagnosticsExpanded && (
-          <>
-            <div className="scorecard-grid scores-grid">
-              {alignment && <ScoreCard score={alignment} />}
-              {integrity && <ScoreCard score={integrity} />}
-            </div>
-            {diagnostics.length > 0 && (
-              <div className="scorecard-grid">
-                {diagnostics.map((item) => (
-                  <ScorecardItem key={text(item.id)} item={item} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </section>
-      )}
-    </article>
-  );
-}
-
-/**
- * Integrity deliberately gets no progress bar: it counts unacknowledged
- * commitments toward zero, and a percentage on it would be a category error.
- */
-function ScoreCard({ score }: { score: JsonRecord }) {
-  const countToZero = text(score.kind) === "count-to-zero";
-  const raw = score.current_value;
-  const measured = raw !== null && raw !== undefined;
-  const domains = asNullableRecord(score.domains);
-
-  return (
-    <article className="scorecard-item score-card">
-      <p>{text(score.label)}</p>
-      {measured ? (
-        <strong className={countToZero && number(raw) > 0 ? "not-yet" : "yes"}>
-          {number(raw)}
-          {!countToZero && <span> / 100</span>}
-        </strong>
-      ) : (
-        <strong className="not-yet">Not yet measured</strong>
-      )}
-      <small>{text(score.question)}</small>
-      <small>{text(score.measure)}</small>
-      {/* Where the number came from. A score you cannot open is a rumor, so the
-          working is part of the score, not a tooltip. */}
-      {text(score.note) && <small className="score-note">{text(score.note)}</small>}
-      {domains && (
-        <ul className="charter-details">
-          {["word", "systems", "objects"].map((key) => (
-            <li key={key}>
-              <strong>{key}</strong> — {text(domains[key])}
-            </li>
-          ))}
-        </ul>
-      )}
     </article>
   );
 }
@@ -1835,39 +1830,6 @@ function MetricRow({ metric }: { metric: JsonRecord }) {
         <span style={{ width: `${ratio}%` }} />
       </span>
     </li>
-  );
-}
-
-function ScorecardItem({ item }: { item: JsonRecord }) {
-  const isBoolean = text(item.kind) === "boolean";
-  const current = number(item.current_value);
-  const target = number(item.target_value);
-  const ratio =
-    !isBoolean && target > 0
-      ? Math.min(100, Math.max(0, (current / target) * 100))
-      : 0;
-  const yes = number(item.boolean_value) === 1;
-
-  return (
-    <article className={`scorecard-item ${isBoolean ? "boolean" : ""}`}>
-      <p>{text(item.label)}</p>
-      {isBoolean ? (
-        <strong className={yes ? "yes" : "not-yet"}>
-          {yes ? "Yes" : "Not yet"}
-        </strong>
-      ) : (
-        <>
-          <strong>
-            {current} <span>/ {target}</span>
-          </strong>
-          <div className="scorecard-track">
-            <span style={{ width: `${ratio}%` }} />
-          </div>
-          <small>{text(item.unit)}</small>
-        </>
-      )}
-      {text(item.note) && <small>{text(item.note)}</small>}
-    </article>
   );
 }
 
