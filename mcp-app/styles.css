@@ -2743,14 +2743,6 @@ button.analytics-row:focus-visible .analytics-fill {
   flex: 1 1 auto;
 }
 
-.commitment-chevron {
-  flex: 0 0 auto;
-  color: rgb(var(--ink));
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  font-size: 1.05rem;
-  line-height: 1;
-  opacity: 0.75;
-}
 
 .commitment:focus-visible {
   outline: 2px solid rgb(var(--ink));

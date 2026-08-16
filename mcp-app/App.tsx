@@ -1494,9 +1494,6 @@ function DeclarationView({
                         {index + 1}
                       </span>
                       <span className="commitment-label">{commitment}</span>
-                      <span className="commitment-chevron" aria-hidden="true">
-                        {on ? "\u2212" : "+"}
-                      </span>
                     </button>
                   </li>
                 );
