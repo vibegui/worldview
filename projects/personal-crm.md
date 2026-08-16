@@ -1,31 +1,53 @@
 ---
 id: personal-crm
-name: Personal Relationship Manager (PRM)
-public: true
+name: Vigia
+repo: vibegui/vigia
 lifecycle: active
+public: true
 next_review: 2026-08-02
 serves: [relationships]
 ---
 
-**Espírito:** Nada é mais importante do que manter as conexões que importam
-**Spirit:** Nothing is more important than keeping up with important connections
+**Espírito:** O vigia que ronda o prédio hora a hora e anota o que viu.
+**Spirit:** The watchman who walks the building hour by hour and writes down what he saw.
 
-Mapa em círculos concêntricos das minhas relações — a proximidade vem da frequência de contato, não de uma lista estática. O motor é um leitor de WhatsApp + LinkedIn (extensão de navegador e exports) que ingere conversas reais e dados de rede para montar o mapa e revelar oportunidades, respostas atrasadas e insights de relacionamento.
+Coletor pessoal local. Indexa na sua máquina os sinais que você já gera o dia
+inteiro — abas do navegador, conversas do WhatsApp, conexões do LinkedIn —,
+resolve tudo em pessoas e projetos, e serve esse índice aos seus agentes por MCP.
+Somente leitura em toda fonte, sem mãos.
 
-Concentric-circle map of your relationships — proximity is driven by contact frequency, not a static list. Core engine is a WhatsApp + LinkedIn scraper (browser extension + exports) that ingests real conversations and network data to build the map and surface opportunities, overdue replies, and relationship insights.
+A local personal collector. It indexes the signals you already generate all day —
+browser tabs, WhatsApp threads, LinkedIn connections — resolves them into people
+and projects, and serves that index to your agents over MCP. Read-only at every
+source, no hands.
 
 ## Resultado declarado
 
-Construir o núcleo de ingestão: uma extensão de navegador (e o que mais for preciso) que exporta conversas do WhatsApp e a rede do LinkedIn, alimenta um leitor/parser e desenha as pessoas em círculos concêntricos (mais perto = mais contato), com sinais automáticos: quem responder, relações dormentes e oportunidades possíveis.
+Meus agentes sabem em que estou trabalhando e a quem devo resposta, sem eu contar.
+
+O corpus nunca sai da máquina: só conclusões viajam. O Worldview recebe evidência
+derivada — "este grupo de 11 abas é a migração pro Cloudflare", "você deve uma
+resposta pra Renata há 14 dias" — e nunca um corpo de mensagem, uma lista de
+contatos ou um histórico de URL.
 
 ## Declared outcome
 
-Build the ingest core: a browser extension (and any other needed tooling) that exports WhatsApp conversations and LinkedIn network/connections, feeds them into a reader/parser, and renders people as concentric circles (closer = more contact) with auto-surfaced signals: people to respond to, dormant relationships, and potential opportunities.
+My agents know what I am working on and who I owe a reply to, without my telling
+them.
+
+The corpus never leaves the machine; only conclusions travel. Worldview receives
+derived evidence — "this cluster of 11 tabs is the Cloudflare migration", "you
+owe Renata a reply, 14 days" — and never a message body, a contact list, or a URL
+history.
 
 ## Critérios de sucesso
 
-1. Funcionando de ponta a ponta: exportar conversas do WhatsApp e a rede do LinkedIn pela extensão, parsear e pontuar por recência e frequência de contato, desenhar o mapa em círculos concêntricos e validar pelo menos uma ação real revelada (resposta pendente ou oportunidade) contra as relações de verdade.
+1. Uma pessoa que aparece em três fontes com três nomes vira um nó só, e fusões ambíguas são propostas em vez de aplicadas.
+2. Perguntar "em que estou trabalhando" devolve resposta com evidência, não com palpite.
+3. Pelo menos uma reconexão real acontece porque o índice a revelou primeiro.
 
 ## Success criteria
 
-1. Working end-to-end: export WhatsApp chats + LinkedIn network via extension -> parsed and scored by contact recency/frequency -> concentric-circle map rendered -> at least one real surfaced action (reply-needed or opportunity) validated against the user's actual relationships.
+1. A person who appears in three sources under three names collapses into one node, and ambiguous merges are proposed rather than applied.
+2. Asking "what am I working on" returns an answer with evidence behind it, not a guess.
+3. At least one real reconnection happens because the index surfaced it first.
