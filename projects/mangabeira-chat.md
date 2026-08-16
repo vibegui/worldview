@@ -5,7 +5,7 @@ repo: deco-cx/mangabeira
 public: true
 lifecycle: active
 next_review: 2026-07-26
-serves: [brasil, understanding]
+serves: [understanding, brasil]
 ---
 
 **Espírito:** Ideias poderosas tornadas acessíveis pela conversa

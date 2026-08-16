@@ -18,11 +18,14 @@ import { createWorker } from "./worker/index.ts";
 // One import per project: there is no glob import in a Worker, and a build step
 // that generated this would put a pipeline back into what should be config.
 import anjoChat from "../projects/anjo-chat.md";
+import holocard from "../projects/holocard.md";
 import decoStudio from "../projects/deco-studio.md";
 import mangabeiraChat from "../projects/mangabeira-chat.md";
 import personalCrm from "../projects/personal-crm.md";
 import personalFiles from "../projects/personal-files.md";
+import tama from "../projects/tama.md";
 import vibegui from "../projects/vibegui.md";
+import worldview from "../projects/worldview.md";
 
 // Note what is *not* here: a throw when the declaration is malformed. This runs
 // at module scope in a Worker, so throwing would 500 every route rather than the
@@ -32,7 +35,10 @@ export default createWorker({
   worldview: resolveWorldview({ declaration }),
   projects: parseProjects([
     vibegui,
+    worldview,
     decoStudio,
+    holocard,
+    tama,
     mangabeiraChat,
     personalCrm,
     personalFiles,
