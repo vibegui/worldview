@@ -1003,15 +1003,139 @@ button {
   align-items: start;
 }
 
-/* Seventeen metrics read as a board, not a column. Auto-fit rather than a fixed
-   count so adding one does not require touching the CSS. */
-.scores-block .scorecard-grid {
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+/* ---------- the scoreboard ---------- */
+/* Three equal columns, one per commitment, each holding its results and the
+   metrics nested under them. Equal by declaration, not by content: a column
+   sized to its numbers would rank the promises by how much has been measured. */
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: start;
 }
 
-.metric-card small {
+.scoreboard-column > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid rgb(var(--ink) / 0.6);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 92;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.scoreboard-index {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: rgb(var(--ink));
+  color: #0b0f0c;
+  font-variation-settings: "wdth" 75;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreboard-result + .scoreboard-result {
+  margin-top: 1.4rem;
+}
+
+.scoreboard-result-title {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+
+.scoreboard-metrics {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scoreboard-metrics li::before {
+  content: none;
+}
+
+/* Name, reading, rule. No box: a number and its target is one line. */
+.metric-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+}
+
+.metric-name {
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.metric-name small {
   display: block;
   color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.metric-reading {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 88;
+  font-size: 1.02rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.metric-reading.is-unmeasured {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.metric-target {
+  color: var(--muted);
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.metric-track {
+  grid-column: 1 / -1;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--ink) / 0.16);
+  overflow: hidden;
+}
+
+.metric-track > span {
+  display: block;
+  height: 100%;
+  background: rgb(var(--ink) / 0.85);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 900px) {
+  .scoreboard {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
 }
 
 .score-card > strong {
@@ -2543,11 +2667,13 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 .masthead-author {
-  font-variation-settings: "wdth" 88;
-  font-weight: 500;
-  font-size: clamp(1rem, 2.4vw, 1.7rem);
-  letter-spacing: 0.01em;
-  text-transform: none;
+  order: -1;
+  margin-bottom: 0.15rem;
+  font-variation-settings: "wdth" 84;
+  font-weight: 600;
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -2589,11 +2715,22 @@ button.analytics-row:focus-visible .analytics-fill {
   letter-spacing: -0.01em;
   text-align: left;
   cursor: pointer;
+  /* Slower on the way in than on the way out, and the glow trails the rest by a
+     beat — so the switch reads as something warming up rather than a class
+     being added. Matches the orb, which eases the same way. */
   transition:
-    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    color 0.44s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    box-shadow 0.62s cubic-bezier(0.16, 1, 0.3, 1) 0.09s;
+}
+
+.commitment:not(.is-lit) {
+  transition:
+    border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.34s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .commitment:hover {
@@ -2609,6 +2746,7 @@ button.analytics-row:focus-visible .analytics-fill {
 .commitment-chevron {
   flex: 0 0 auto;
   color: rgb(var(--ink));
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   font-size: 1.05rem;
   line-height: 1;
   opacity: 0.75;
@@ -2629,6 +2767,9 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 .commitment .commitment-index {
+  transition:
+    background 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.04s;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -2716,9 +2857,9 @@ button.analytics-row:focus-visible .analytics-fill {
   opacity: 0.12;
   transform: translateY(4px);
   transition:
-    opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+    border-color 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.08s;
 }
 
 .charter-card .charter-statement:not(.is-shown) {

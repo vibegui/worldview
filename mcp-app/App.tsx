@@ -9,7 +9,7 @@ const globals = (typeof window !== "undefined" ? window : {}) as {
   __WORLDVIEW__?: {
     name?: string;
     results?: Record<string, string>;
-    commitments?: string[];
+    commitments?: Array<{ id: string; label: string }>;
     author?: string;
   };
 };
@@ -1456,21 +1456,24 @@ function DeclarationView({
           cover leans. */}
       <header className="masthead">
         <div className="masthead-type">
+          {/* The name reads first: whose declaration this is, then what it is.
+              A masthead that names the document before its author has it the
+              wrong way round for something signed. */}
           <h1>
-            <span>{ui("declarationTitle")}</span>
-            <span className="masthead-rule" aria-hidden="true" />
             <span className="masthead-author">
               {declaration.author ?? "Guilherme Rodrigues"}
             </span>
+            <span>{ui("declarationTitle")}</span>
+            <span className="masthead-rule" aria-hidden="true" />
           </h1>
           {commitments.length > 0 && (
             <ol className="commitments">
-              {commitments.map((commitment, index) => {
+              {commitments.map(({ id, label: commitment }, index) => {
                 const ink = STRAND_INKS[index % STRAND_INKS.length]!;
                 const on = lit.includes(index);
                 return (
                   <li
-                    key={commitment}
+                    key={id}
                     style={
                       { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
                     }
@@ -1536,10 +1539,47 @@ function DeclarationView({
             <h2>{ui("scorecard")}</h2>
           </div>
         </div>
-        <div className="scorecard-grid scores-grid">
-          {scorecard.map((metric) => (
-            <MetricCard key={text(metric.id)} metric={metric} />
-          ))}
+        {/* One column per commitment, equal width, with each strategic result
+            heading the metrics that measure it. Grouped rather than listed
+            because seventeen numbers in a flat grid say nothing about which
+            promise they belong to. */}
+        <div className="scoreboard">
+          {commitments.map(({ id, label }, index) => {
+            const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+            const byResult = scorecard
+              .filter((metric) => text(metric.commitment) === id)
+              .reduce<Map<string, JsonRecord[]>>((groups, metric) => {
+                const key = text(metric.result_title);
+                groups.set(key, [...(groups.get(key) ?? []), metric]);
+                return groups;
+              }, new Map());
+            return (
+              <section
+                className="scoreboard-column"
+                key={id}
+                style={
+                  { "--ink": `${ink.r} ${ink.g} ${ink.b}` } as React.CSSProperties
+                }
+              >
+                <h3>
+                  <span className="scoreboard-index" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  {label}
+                </h3>
+                {[...byResult].map(([resultTitle, metrics]) => (
+                  <div className="scoreboard-result" key={resultTitle}>
+                    <p className="scoreboard-result-title">{resultTitle}</p>
+                    <ul className="scoreboard-metrics">
+                      {metrics.map((metric) => (
+                        <MetricRow key={text(metric.id)} metric={metric} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
       </section>
 
@@ -1688,27 +1728,13 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
         </div>
         <div>
           <p className="project-label">{ui("metrics")}</p>
-          <div className="result-metrics">
-            {metrics.map((metric) => {
-              // Metrics are declared in git with a target only; nothing in D1
-              // measures them yet. Rendering `0 / target` asserted a zero for
-              // every one of them, which is a number nobody produced.
-              const measured =
-                metric.current !== null && metric.current !== undefined;
-              return (
-                <div key={text(metric.label)}>
-                  <strong className={measured ? undefined : "unmeasured"}>
-                    {measured
-                      ? `${number(metric.current)} / ${number(metric.target)}`
-                      : `target ${number(metric.target)}`}
-                  </strong>
-                  <span>
-                    {text(metric.label)} · {text(metric.unit)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          {/* The same row the scoreboard uses, so a metric looks like itself
+              wherever it appears rather than like two different components. */}
+          <ul className="scoreboard-metrics">
+            {metrics.map((metric) => (
+              <MetricRow key={text(metric.label)} metric={metric} />
+            ))}
+          </ul>
         </div>
       </div>
     </article>
@@ -1716,51 +1742,44 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
 }
 
 /**
- * One declared metric, read.
+ * One declared metric, read: a name, a reading, and the target it is measured
+ * against.
  *
- * `current === null` renders as "not measured" rather than 0, because those are
+ * `current === null` renders as unmeasured rather than 0, because those are
  * different claims: one says nobody has looked, the other says someone looked
  * and found nothing. Only the second is evidence.
+ *
+ * A row, not a card. A number and its target is one line, and a box around one
+ * line is a box around nothing.
  */
-function MetricCard({ metric }: { metric: JsonRecord }) {
+function MetricRow({ metric }: { metric: JsonRecord }) {
   const target = number(metric.target);
   const measured = metric.current !== null && metric.current !== undefined;
   const current = number(metric.current);
+  // A target of zero is a floor to hold, not a bar to fill — incidents, or
+  // unacknowledged commitments. Meeting it is the whole achievement.
+  const holdAtZero = target === 0;
   const ratio =
     measured && target > 0
       ? Math.min(100, Math.max(0, (current / target) * 100))
       : 0;
-  // A target of zero is a floor to hold, not a bar to fill — incidents, or
-  // unacknowledged commitments. Meeting it is the whole achievement.
-  const holdAtZero = target === 0;
 
   return (
-    <article className="scorecard-item metric-card">
-      <p>{text(metric.label)}</p>
-      {measured ? (
-        <strong className={holdAtZero && current > 0 ? "not-yet" : undefined}>
-          {current}
-          {!holdAtZero && <span> / {target}</span>}
-        </strong>
-      ) : (
-        <strong className="not-yet">
-          <span>
-            {ui("target")} {target}
-          </span>
-        </strong>
-      )}
-      {!holdAtZero && (
-        <div className="scorecard-track">
-          <span style={{ width: `${ratio}%` }} />
-        </div>
-      )}
-      <small>
-        {text(metric.unit)}
-        {resultTitles[text(metric.result_id)] &&
-          ` · ${resultTitles[text(metric.result_id)]}`}
-      </small>
-      {text(metric.note) && <small>{text(metric.note)}</small>}
-    </article>
+    <li className="metric-row">
+      <span className="metric-name">
+        {text(metric.label)}
+        <small>{text(metric.unit)}</small>
+      </span>
+      <span className={`metric-reading ${measured ? "" : "is-unmeasured"}`}>
+        {measured ? current : "\u2014"}
+        <span className="metric-target">
+          {holdAtZero ? " \u2264 0" : ` / ${target}`}
+        </span>
+      </span>
+      <span className="metric-track" aria-hidden="true">
+        <span style={{ width: `${ratio}%` }} />
+      </span>
+    </li>
   );
 }
 

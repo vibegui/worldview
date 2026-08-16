@@ -565,6 +565,10 @@ export const tools: ToolDefinition[] = [
           source: "worldview.json",
         },
         what_game_i_am_playing: {
+          commitments: (env.worldview.commitments ?? []).map((commitment) => ({
+            id: commitment.id,
+            label: t(commitment.label, locale),
+          })),
           conditions_of_satisfaction: tAll(
             env.worldview.conditionsOfSatisfaction,
             locale,

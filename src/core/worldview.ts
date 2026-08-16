@@ -37,6 +37,8 @@ export interface WorldviewStrategicResult {
   stage?: "ideas" | "expansion" | "execution" | "content" | "distribution";
   /** Which score this result belongs to, if it is a condition rather than a stage. */
   score?: "alignment" | "integrity";
+  /** The commitment this result is in service of. */
+  commitment?: string;
 }
 
 /** The parsed contents of an instance's `worldview.json`. Structure only. */
@@ -78,10 +80,11 @@ export interface WorldviewDeclaration {
     };
   };
   /**
-   * The three a reader should be able to repeat back. Distinct from integrity's
-   * `word` domain, which is the full ledger — these are the headline.
+   * The few a reader should be able to repeat back. Distinct from integrity's
+   * `word` domain, which is the full ledger — these are the headline. Strategic
+   * results name one, which is how the scorecard knows what to group by.
    */
-  commitments?: LocalizedText[];
+  commitments?: Array<{ id: string; label: LocalizedText }>;
   conditionsOfSatisfaction: LocalizedText[];
   strategicResults: WorldviewStrategicResult[];
 }
@@ -157,6 +160,18 @@ export function worldviewErrors(input: WorldviewInput): string[] {
     errors.push("declare at least one strategic result");
   }
 
+  const commitmentIds = new Set<string>();
+  candidate.commitments?.forEach((commitment, index) => {
+    const at = `commitments[${index}]`;
+    if (!slug.test(commitment?.id ?? "")) errors.push(`${at}: id must be a slug`);
+    if (commitmentIds.has(commitment?.id)) errors.push(`${at}: duplicate id`);
+    commitmentIds.add(commitment?.id);
+    const missing = missingLocales(commitment?.label);
+    if (missing.length) {
+      errors.push(`${at}: label is missing ${missing.join(", ")}`);
+    }
+  });
+
   const seenIds = new Set<string>();
   const seenPositions = new Set<number>();
   const seenMetricIds = new Set<string>();
@@ -177,6 +192,13 @@ export function worldviewErrors(input: WorldviewInput): string[] {
     }
     if (!result.acceptanceCriteria?.length) {
       errors.push(`${at}: needs at least one acceptance criterion`);
+    }
+    // A result under no commitment has nowhere to sit on the scorecard, so it
+    // would silently vanish from the only place the numbers are read.
+    if (commitmentIds.size && !commitmentIds.has(result.commitment ?? "")) {
+      errors.push(
+        `${at}: commitment "${result.commitment ?? ""}" is not declared`,
+      );
     }
     result.acceptanceCriteria?.forEach((criterion, index) => {
       const missing = missingLocales(criterion);

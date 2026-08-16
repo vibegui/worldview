@@ -133,6 +133,7 @@ export async function getDeclarationDashboard(
         position: result.position,
         stage: result.stage ?? null,
         score: result.score ?? null,
+        commitment: result.commitment ?? null,
         title: t(result.title, locale),
         narrative: t(result.narrative, locale),
         acceptance_criteria: tAll(result.acceptanceCriteria, locale),
@@ -174,6 +175,7 @@ export async function getDeclarationDashboard(
           updated_at: row?.updated_at ?? null,
           result_id: result.id,
           result_title: t(result.title, locale),
+          commitment: result.commitment ?? null,
         };
       }),
     );

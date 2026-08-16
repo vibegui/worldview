@@ -150,7 +150,8 @@
             "en": "artifacts"
           }
         }
-      ]
+      ],
+      "commitment": "brasil"
     },
     {
       "id": "autonomy",
@@ -203,7 +204,8 @@
             "en": "companies"
           }
         }
-      ]
+      ],
+      "commitment": "brasil"
     },
     {
       "id": "multiplication",
@@ -256,7 +258,8 @@
             "en": "people"
           }
         }
-      ]
+      ],
+      "commitment": "brasil"
     },
     {
       "id": "expression",
@@ -309,7 +312,8 @@
             "en": "readers per month"
           }
         }
-      ]
+      ],
+      "commitment": "liberdade"
     },
     {
       "id": "understanding",
@@ -362,7 +366,8 @@
             "en": "sources"
           }
         }
-      ]
+      ],
+      "commitment": "liberdade"
     },
     {
       "id": "agency",
@@ -415,7 +420,8 @@
             "en": "per week"
           }
         }
-      ]
+      ],
+      "commitment": "liberdade"
     },
     {
       "id": "relationships",
@@ -467,7 +473,8 @@
             "en": "working set"
           }
         }
-      ]
+      ],
+      "commitment": "serenidade"
     },
     {
       "id": "vitality",
@@ -507,7 +514,8 @@
             "en": "consecutive days"
           }
         }
-      ]
+      ],
+      "commitment": "serenidade"
     },
     {
       "id": "order",
@@ -559,21 +567,31 @@
             "en": "incidents"
           }
         }
-      ]
+      ],
+      "commitment": "serenidade"
     }
   ],
   "commitments": [
     {
-      "pt-BR": "Brasil protagonista em Tecnologia",
-      "en": "Brazil, a protagonist in technology"
+      "id": "brasil",
+      "label": {
+        "pt-BR": "Brasil protagonista em Tecnologia",
+        "en": "Brazil, a protagonist in technology"
+      }
     },
     {
-      "pt-BR": "Liberdade para ser e agir",
-      "en": "Freedom to be and to act"
+      "id": "liberdade",
+      "label": {
+        "pt-BR": "Liberdade para ser e agir",
+        "en": "Freedom to be and to act"
+      }
     },
     {
-      "pt-BR": "Poder é sereno",
-      "en": "Power is serene"
+      "id": "serenidade",
+      "label": {
+        "pt-BR": "Poder é sereno",
+        "en": "Power is serene"
+      }
     }
   ]
 }
