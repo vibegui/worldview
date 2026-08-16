@@ -115,7 +115,13 @@ export async function getDeclarationDashboard(
   // reading next to it.
   const workByResult = new Map<
     string,
-    Array<{ id: string; name: string; repo: string | null; lifecycle: string }>
+    Array<{
+      id: string;
+      name: string;
+      repo: string | null;
+      lifecycle: string;
+      primary: boolean;
+    }>
   >();
   for (const project of env.projects) {
     const lifecycle = String(
@@ -130,6 +136,11 @@ export async function getDeclarationDashboard(
           name: project.name,
           repo: project.repo ?? null,
           lifecycle,
+          // `serves` is ordered. A project whose *first* result is this one is
+          // pointed at it; the rest contribute to it on the way somewhere else.
+          // A result that everything contributes to and nothing is aimed at is
+          // a result nobody is actually working on.
+          primary: project.serves[0] === result,
         },
       ]);
     }
@@ -173,7 +184,14 @@ export async function getDeclarationDashboard(
         // How much active work is actually pointed at this result. Zero here on
         // a result with progress is the interesting disagreement.
         active_project_count: projectsByResult.get(result.id) ?? 0,
-        projects: workByResult.get(result.id) ?? [],
+        // Aimed-at first, then the ones contributing on their way elsewhere,
+        // then drafts. Declaration order put the focused project sixth out of
+        // seven, which buried the one fact the list exists to state.
+        projects: (workByResult.get(result.id) ?? []).slice().sort((a, b) =>
+          Number(b.primary) - Number(a.primary) ||
+          Number(a.lifecycle === "draft") - Number(b.lifecycle === "draft") ||
+          a.name.localeCompare(b.name),
+        ),
       };
     });
 

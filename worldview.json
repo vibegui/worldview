@@ -162,8 +162,8 @@
       "position": 2,
       "stage": "execution",
       "title": {
-        "pt-BR": "Construo uma software factory agêntica open source brasileira",
-        "en": "I build a Brazilian open-source agentic software factory"
+        "pt-BR": "Criei a primeira software factory open source brasileira",
+        "en": "I created the first Brazilian open-source software factory"
       },
       "narrative": {
         "pt-BR": "A deco torna experiências digitais autônomas — marcas entregam funções inteiras a um colega de time que lembra, trabalha de madrugada e aparece com o trabalho feito. É construída no aberto e no Brasil: os rituais e métodos com que tocamos a empresa são publicados, e outras empresas os replicaram.",
@@ -212,8 +212,62 @@
       "commitment": "brasil"
     },
     {
-      "id": "expression",
+      "id": "agency",
       "position": 3,
+      "stage": "ideas",
+      "title": {
+        "pt-BR": "Construo meu portfólio de projetos em público",
+        "en": "I build my portfolio of projects in public"
+      },
+      "narrative": {
+        "pt-BR": "Todo projeto ativo está visível em um mapa que qualquer um pode abrir, ligado a um resultado explícito e à evidência de que está andando. Construir no aberto é o que torna a distância entre a declaração e a medição checável por outra pessoa — e é essa distância que é o trabalho.",
+        "en": "Every active project is visible in a map anyone can open, tied to an explicit result and to the evidence that it is moving. Building in the open is what makes the gap between the declaration and the measurement checkable by someone else — and that gap is the work."
+      },
+      "acceptanceCriteria": [
+        {
+          "pt-BR": "Todo projeto ativo tem objetivo, critérios de sucesso, estado e próxima revisão",
+          "en": "Every active project has a goal, success criteria, state, and next review"
+        },
+        {
+          "pt-BR": "Um brief diário útil é revisado pelo menos cinco vezes por semana",
+          "en": "A useful daily brief is reviewed at least five times per week"
+        },
+        {
+          "pt-BR": "O sistema mostra compromissos parados e recomenda próximos passos concretos",
+          "en": "The system surfaces stale commitments and recommends concrete next steps"
+        }
+      ],
+      "metrics": [
+        {
+          "id": "project-coverage",
+          "label": {
+            "pt-BR": "Projetos ativos com objetivo",
+            "en": "Active projects with goals"
+          },
+          "target": 5,
+          "unit": {
+            "pt-BR": "projetos",
+            "en": "projects"
+          }
+        },
+        {
+          "id": "daily-briefs",
+          "label": {
+            "pt-BR": "Briefs diários revisados",
+            "en": "Daily briefs reviewed"
+          },
+          "target": 5,
+          "unit": {
+            "pt-BR": "por semana",
+            "en": "per week"
+          }
+        }
+      ],
+      "commitment": "brasil"
+    },
+    {
+      "id": "expression",
+      "position": 4,
       "stage": "distribution",
       "title": {
         "pt-BR": "Publico todo dia, e quem lê confia no que encontra",
@@ -267,7 +321,7 @@
     },
     {
       "id": "understanding",
-      "position": 4,
+      "position": 5,
       "stage": "content",
       "title": {
         "pt-BR": "Entrego distinções importantes em conversa, e a metodologia viaja sem mim",
@@ -326,60 +380,6 @@
           "unit": {
             "pt-BR": "organizações",
             "en": "organizations"
-          }
-        }
-      ],
-      "commitment": "liberdade"
-    },
-    {
-      "id": "agency",
-      "position": 5,
-      "stage": "ideas",
-      "title": {
-        "pt-BR": "Movo meus projetos como um portfólio só",
-        "en": "I move my projects as a single portfolio"
-      },
-      "narrative": {
-        "pt-BR": "Todo projeto ativo está visível em um mapa, ligado a um resultado explícito e à evidência de que está andando. A distância entre a declaração e a medição é o trabalho.",
-        "en": "Every active project is visible in one map, connected to an explicit outcome and the evidence of whether it is moving. The gap between the declaration and the measurement is the work."
-      },
-      "acceptanceCriteria": [
-        {
-          "pt-BR": "Todo projeto ativo tem objetivo, critérios de sucesso, estado e próxima revisão",
-          "en": "Every active project has a goal, success criteria, state, and next review"
-        },
-        {
-          "pt-BR": "Um brief diário útil é revisado pelo menos cinco vezes por semana",
-          "en": "A useful daily brief is reviewed at least five times per week"
-        },
-        {
-          "pt-BR": "O sistema mostra compromissos parados e recomenda próximos passos concretos",
-          "en": "The system surfaces stale commitments and recommends concrete next steps"
-        }
-      ],
-      "metrics": [
-        {
-          "id": "project-coverage",
-          "label": {
-            "pt-BR": "Projetos ativos com objetivo",
-            "en": "Active projects with goals"
-          },
-          "target": 5,
-          "unit": {
-            "pt-BR": "projetos",
-            "en": "projects"
-          }
-        },
-        {
-          "id": "daily-briefs",
-          "label": {
-            "pt-BR": "Briefs diários revisados",
-            "en": "Daily briefs reviewed"
-          },
-          "target": 5,
-          "unit": {
-            "pt-BR": "por semana",
-            "en": "per week"
           }
         }
       ],
