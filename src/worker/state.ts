@@ -140,8 +140,33 @@ export async function getDeclarationDashboard(env: Env) {
     scorecard.results.map((row) => [String(row.id), row]),
   );
 
+  // The scorecard is not a separate list of numbers — it is every declared
+  // metric, read. Target and label come from git, the reading from D1, joined on
+  // the metric id. A metric with no row is `current: null`, which the UI shows
+  // as unmeasured; rendering it as 0 would claim a measurement nobody took.
+  const scorecardMetrics = env.worldview.strategicResults
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .flatMap((result) =>
+      result.metrics.map((metric) => {
+        const row = scoreValueById.get(metric.id);
+        const current = row?.current_value ?? row?.boolean_value ?? null;
+        return {
+          ...metric,
+          current: current === null ? null : Number(current),
+          note: String(row?.note ?? ""),
+          updated_at: row?.updated_at ?? null,
+          result_id: result.id,
+          result_title: result.title,
+        };
+      }),
+    );
+
+  const measuredIds = new Set(scorecardMetrics.map((metric) => metric.id));
+
   return {
     strategic_results: strategicResults,
+    scorecard: scorecardMetrics,
     scores: {
       alignment: {
         ...env.worldview.scores.alignment,
@@ -162,10 +187,14 @@ export async function getDeclarationDashboard(env: Env) {
         ...pickScoreValue(scoreValueById.get("integrity")),
       },
     },
-    // Everything that used to be a top-level scorecard item stays available as
-    // diagnostic detail beneath the two scores. Nothing was dropped.
+    // Rows that no declared metric claims. They are readings taken against an
+    // earlier declaration, so they are not on the scorecard any more — and they
+    // are not deleted either, because a measurement someone actually took is
+    // evidence, and this is the only place it still exists.
     diagnostics: scorecard.results.filter(
-      (row) => !SCORE_IDS.includes(String(row.id) as ScoreId),
+      (row) =>
+        !SCORE_IDS.includes(String(row.id) as ScoreId) &&
+        !measuredIds.has(String(row.id)),
     ),
   };
 }

@@ -716,13 +716,11 @@ button {
   display: grid;
   align-items: start;
   gap: 20px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .declaration-hero .charter-card {
-  max-height: 76vh;
   padding: 22px;
-  overflow-y: auto;
 }
 
 /* Already at the top of the page, so it does not need the 48px that separates
@@ -993,6 +991,17 @@ button {
 .scores-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
+}
+
+/* Seventeen metrics read as a board, not a column. Auto-fit rather than a fixed
+   count so adding one does not require touching the CSS. */
+.scores-block .scorecard-grid {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.metric-card small {
+  display: block;
+  color: var(--muted);
 }
 
 .score-card > strong {

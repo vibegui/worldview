@@ -49,11 +49,13 @@
       ],
       "metrics": [
         {
+          "id": "angel-investments",
           "label": "Founders backed",
           "target": 25,
           "unit": "angel investments"
         },
         {
+          "id": "brasil-artifacts",
           "label": "Conversations that became artifacts",
           "target": 12,
           "unit": "artifacts"
@@ -73,11 +75,13 @@
       ],
       "metrics": [
         {
+          "id": "methods-published",
           "label": "Operating methods published",
           "target": 6,
           "unit": "methods"
         },
         {
+          "id": "methods-replicated",
           "label": "Companies that replicated them",
           "target": 3,
           "unit": "companies"
@@ -97,11 +101,13 @@
       ],
       "metrics": [
         {
+          "id": "future-driven-orgs",
           "label": "Organizations that ran a cycle",
           "target": 25,
           "unit": "organizations"
         },
         {
+          "id": "maintainers",
           "label": "Independent facilitators",
           "target": 3,
           "unit": "people"
@@ -121,11 +127,13 @@
       ],
       "metrics": [
         {
+          "id": "publishing-streak",
           "label": "Consecutive days publishing",
           "target": 365,
           "unit": "days"
         },
         {
+          "id": "monthly-readers",
           "label": "Monthly readers",
           "target": 250000,
           "unit": "readers per month"
@@ -145,11 +153,13 @@
       ],
       "metrics": [
         {
+          "id": "distinctions",
           "label": "Structured distinctions",
           "target": 12,
           "unit": "distinctions"
         },
         {
+          "id": "sources",
           "label": "Mapped sources",
           "target": 20,
           "unit": "sources"
@@ -169,11 +179,13 @@
       ],
       "metrics": [
         {
+          "id": "project-coverage",
           "label": "Active projects with goals",
           "target": 5,
           "unit": "projects"
         },
         {
+          "id": "daily-briefs",
           "label": "Daily briefs reviewed",
           "target": 5,
           "unit": "per week"
@@ -192,11 +204,13 @@
       ],
       "metrics": [
         {
+          "id": "trusted-circle",
           "label": "Trusted circle mapped",
           "target": 1,
           "unit": "complete circle"
         },
         {
+          "id": "relationship-records",
           "label": "Verified relationship records",
           "target": 1,
           "unit": "working set"
@@ -215,6 +229,7 @@
       ],
       "metrics": [
         {
+          "id": "vitality-streak",
           "label": "Daily streak",
           "target": 120,
           "unit": "consecutive days"
@@ -233,11 +248,13 @@
       ],
       "metrics": [
         {
+          "id": "storage-map",
           "label": "Storage sources indexed",
           "target": 3,
           "unit": "sources"
         },
         {
+          "id": "storage-incidents",
           "label": "Unrecoverable automated operations",
           "target": 0,
           "unit": "incidents"

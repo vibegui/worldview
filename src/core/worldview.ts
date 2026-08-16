@@ -13,6 +13,13 @@
  */
 
 export interface WorldviewMetric {
+  /**
+   * Join key into D1's `scorecard_items`, which is where the *current* reading
+   * lives. The target is declared here, because changing what counts as success
+   * should be a commit; the reading is evidence and belongs in the database.
+   * An id with no row yet reads as unmeasured — which is not the same as zero.
+   */
+  id: string;
   label: string;
   target: number;
   unit: string;
@@ -132,6 +139,7 @@ export function worldviewErrors(input: WorldviewInput): string[] {
 
   const seenIds = new Set<string>();
   const seenPositions = new Set<number>();
+  const seenMetricIds = new Set<string>();
   for (const result of candidate.strategicResults ?? []) {
     const at = `strategicResults[${result.id ?? "?"}]`;
     if (!slug.test(result.id ?? "")) errors.push(`${at}: id must be a slug`);
@@ -151,6 +159,14 @@ export function worldviewErrors(input: WorldviewInput): string[] {
       if (typeof metric.target !== "number") {
         errors.push(`${at}: metric "${metric.label}" needs a numeric target`);
       }
+      // Without an id there is nowhere for the reading to come from, so the
+      // metric renders as a target forever and nobody notices it is not wired.
+      if (!slug.test(metric.id ?? "")) {
+        errors.push(`${at}: metric "${metric.label}" needs a slug id`);
+      } else if (seenMetricIds.has(metric.id)) {
+        errors.push(`${at}: metric id "${metric.id}" is used twice`);
+      }
+      seenMetricIds.add(metric.id);
     }
     seenIds.add(result.id);
     seenPositions.add(result.position);

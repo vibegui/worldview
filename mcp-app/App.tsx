@@ -373,7 +373,8 @@ function ResultView({
           game?.strategic_results ?? result.strategic_results,
         )}
         scores={scores}
-        diagnostics={asRecords(result.diagnostics ?? result.scorecard)}
+        scorecard={asRecords(result.scorecard)}
+        diagnostics={asRecords(result.diagnostics)}
       />
     );
   }
@@ -1318,6 +1319,7 @@ function DeclarationView({
   conditions,
   strategicResults,
   scores,
+  scorecard,
   diagnostics,
 }: {
   declaredFuture: string;
@@ -1326,6 +1328,7 @@ function DeclarationView({
   conditions: string[];
   strategicResults: JsonRecord[];
   scores: JsonRecord | null;
+  scorecard: JsonRecord[];
   diagnostics: JsonRecord[];
 }) {
   const [charterExpanded, setCharterExpanded] = useState(false);
@@ -1391,19 +1394,25 @@ function DeclarationView({
         )}
       </section>
 
+      </div>
+
+      {/* The scorecard, not the scores. A number with a target next to it is
+          something to act on this week; the two scores are a summary of these
+          and are being reconsidered, so they sit with the diagnostics until
+          they earn the headline back. */}
       <section className="declaration-block scores-block">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Two scores, no others</p>
-            <h2>Am I playing it well?</h2>
+            <p className="eyebrow">Metrics that confirm success</p>
+            <h2>Scorecard</h2>
           </div>
         </div>
         <div className="scorecard-grid scores-grid">
-          {alignment && <ScoreCard score={alignment} />}
-          {integrity && <ScoreCard score={integrity} />}
+          {scorecard.map((metric) => (
+            <MetricCard key={text(metric.id)} metric={metric} />
+          ))}
         </div>
       </section>
-      </div>
 
       <section className="declaration-block">
         <div className="section-heading">
@@ -1433,26 +1442,34 @@ function DeclarationView({
         </ul>
       </section>
 
-      {diagnostics.length > 0 && (
-        <section className="declaration-block">
-          <button
-            type="button"
-            className="charter-toggle"
-            aria-expanded={diagnosticsExpanded}
-            onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
-          >
-            {diagnosticsExpanded ? "Hide diagnostics" : "Show diagnostics"}
-            <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
-          </button>
-          {diagnosticsExpanded && (
-            <div className="scorecard-grid">
-              {diagnostics.map((item) => (
-                <ScorecardItem key={text(item.id)} item={item} />
-              ))}
+      <section className="declaration-block">
+        <button
+          type="button"
+          className="charter-toggle"
+          aria-expanded={diagnosticsExpanded}
+          onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
+        >
+          {diagnosticsExpanded
+            ? "Hide the two scores"
+            : "Show the two scores and older readings"}
+          <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
+        </button>
+        {diagnosticsExpanded && (
+          <>
+            <div className="scorecard-grid scores-grid">
+              {alignment && <ScoreCard score={alignment} />}
+              {integrity && <ScoreCard score={integrity} />}
             </div>
-          )}
-        </section>
-      )}
+            {diagnostics.length > 0 && (
+              <div className="scorecard-grid">
+                {diagnostics.map((item) => (
+                  <ScorecardItem key={text(item.id)} item={item} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {source && (
         <footer>
@@ -1572,6 +1589,53 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
           </div>
         </div>
       </div>
+    </article>
+  );
+}
+
+/**
+ * One declared metric, read.
+ *
+ * `current === null` renders as "not measured" rather than 0, because those are
+ * different claims: one says nobody has looked, the other says someone looked
+ * and found nothing. Only the second is evidence.
+ */
+function MetricCard({ metric }: { metric: JsonRecord }) {
+  const target = number(metric.target);
+  const measured = metric.current !== null && metric.current !== undefined;
+  const current = number(metric.current);
+  const ratio =
+    measured && target > 0
+      ? Math.min(100, Math.max(0, (current / target) * 100))
+      : 0;
+  // A target of zero is a floor to hold, not a bar to fill — incidents, or
+  // unacknowledged commitments. Meeting it is the whole achievement.
+  const holdAtZero = target === 0;
+
+  return (
+    <article className="scorecard-item metric-card">
+      <p>{text(metric.label)}</p>
+      {measured ? (
+        <strong className={holdAtZero && current > 0 ? "not-yet" : undefined}>
+          {current}
+          {!holdAtZero && <span> / {target}</span>}
+        </strong>
+      ) : (
+        <strong className="not-yet">
+          <span>target {target}</span>
+        </strong>
+      )}
+      {!holdAtZero && (
+        <div className="scorecard-track">
+          <span style={{ width: `${ratio}%` }} />
+        </div>
+      )}
+      <small>
+        {text(metric.unit)}
+        {resultTitles[text(metric.result_id)] &&
+          ` · ${resultTitles[text(metric.result_id)]}`}
+      </small>
+      {text(metric.note) && <small>{text(metric.note)}</small>}
     </article>
   );
 }

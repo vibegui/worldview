@@ -567,8 +567,23 @@ export const tools: ToolDefinition[] = [
           strategic_results: dashboard.strategic_results,
         },
         am_i_playing_it_well: dashboard.scores,
-        // Diagnostics sit beneath the two scores and are working detail, not the
-        // declaration. They stay private.
+        // The targets are already public — they ship inside every strategic
+        // result. The *readings* are not: a target is something declared, a
+        // reading is where I actually am, and publishing that is a separate
+        // decision from publishing the declaration. So a stranger sees the bar
+        // and not the fill. Opening this later is one line; un-publishing a
+        // number that has been cached and indexed is not.
+        scorecard:
+          access === "private"
+            ? dashboard.scorecard
+            : dashboard.scorecard.map(({ current, note, updated_at, ...rest }) => {
+                void current;
+                void note;
+                void updated_at;
+                return { ...rest, current: null };
+              }),
+        // Readings taken against an earlier declaration. Working detail, and
+        // they name results that no longer exist, so they stay private.
         ...(access === "private" ? { diagnostics: dashboard.diagnostics } : {}),
       };
     },
