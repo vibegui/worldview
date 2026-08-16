@@ -1,6 +1,7 @@
 ---
 id: personal-files
 name: Personal File Organizer
+public: true
 lifecycle: draft
 next_review: 2026-08-09
 serves: [order]

@@ -1,6 +1,7 @@
 ---
 id: decocms
 name: decoCMS
+public: true
 lifecycle: active
 next_review: 2026-07-19
 serves: [autonomy]

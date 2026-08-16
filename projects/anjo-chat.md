@@ -2,6 +2,7 @@
 id: anjo-chat
 name: anjo.chat
 repo: vibegui/anjo.chat
+public: true
 lifecycle: draft
 next_review: 2026-08-02
 serves: [brasil, multiplication]

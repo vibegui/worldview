@@ -1,6 +1,7 @@
 ---
 id: personal-crm
 name: Personal Relationship Manager (PRM)
+public: true
 lifecycle: active
 next_review: 2026-08-02
 serves: [relationships]

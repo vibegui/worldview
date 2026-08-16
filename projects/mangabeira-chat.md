@@ -2,6 +2,7 @@
 id: mangabeira-chat
 name: mangabeira.chat
 repo: deco-cx/mangabeira
+public: true
 lifecycle: active
 next_review: 2026-07-26
 serves: [brasil, understanding]

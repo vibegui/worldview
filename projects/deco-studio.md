@@ -2,6 +2,7 @@
 id: deco-studio
 name: deco Studio
 repo: decocms/studio
+public: true
 lifecycle: active
 next_review: 2026-07-26
 serves: [autonomy, multiplication]

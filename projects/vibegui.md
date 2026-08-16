@@ -2,6 +2,7 @@
 id: vibegui
 name: VibeGui
 repo: vibegui/vibegui.com
+public: true
 lifecycle: active
 next_review: 2026-07-19
 serves: [expression, agency, understanding]
