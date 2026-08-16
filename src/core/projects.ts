@@ -1,3 +1,5 @@
+import type { Locale } from "./localize.ts";
+
 /**
  * A project's structure lives in the instance's git, one markdown file each.
  *
@@ -24,13 +26,13 @@ export interface DeclaredProject {
    */
   serves: string[];
   /** One line: why this exists at all. */
-  spirit: string;
-  /** First paragraph of `## Declared outcome`: what being done looks like. */
-  outcome: string;
+  spirit: Record<Locale, string>;
+  /** First paragraph of the outcome section: what being done looks like. */
+  outcome: Record<Locale, string>;
   /** The whole section, reasoning included. */
-  outcomeDetail: string;
-  /** The `## Success criteria` section, one entry per line. */
-  successCriteria: string[];
+  outcomeDetail: Record<Locale, string>;
+  /** The success-criteria section, one entry per line. */
+  successCriteria: Record<Locale, string[]>;
   /** Prose, everything after the frontmatter. */
   body: string;
   /**
@@ -149,24 +151,50 @@ export function parseProject(markdown: string): DeclaredProject | null {
   const id = one("id");
   if (!id) return null;
 
+  const outcomePt = section(body, "Resultado declarado");
+  const outcomeEn = section(body, "Declared outcome");
+  const criteriaPt = section(body, "Critérios de sucesso");
+  const criteriaEn = section(body, "Success criteria");
+
   return {
     id,
     name: one("name") || id,
     repo: one("repo") || undefined,
     serves: many("serves"),
-    // `**Spirit:** one line` is the convention in projects/README.md.
-    spirit: body.match(/\*\*Spirit:\*\*\s*(.+)/)?.[1]?.trim() ?? "",
+    // Portuguese first, English second — the same order the file is written in,
+    // and the same fallback rule as the declaration: a missing translation reads
+    // in the other language rather than as a blank commitment.
+    spirit: {
+      "pt-BR": labelled(body, "Espírito") || labelled(body, "Spirit"),
+      en: labelled(body, "Spirit") || labelled(body, "Espírito"),
+    },
     // The first paragraph is the outcome; the rest of the section is the
     // argument for it. Real files run to twenty lines of reasoning, and a card
     // that shows the whole thing shows nothing.
-    outcome: firstParagraph(section(body, "Declared outcome")),
-    outcomeDetail: section(body, "Declared outcome"),
-    successCriteria: listItems(section(body, "Success criteria")),
+    outcome: {
+      "pt-BR": firstParagraph(outcomePt || outcomeEn),
+      en: firstParagraph(outcomeEn || outcomePt),
+    },
+    outcomeDetail: {
+      "pt-BR": outcomePt || outcomeEn,
+      en: outcomeEn || outcomePt,
+    },
+    successCriteria: {
+      "pt-BR": listItems(criteriaPt || criteriaEn),
+      en: listItems(criteriaEn || criteriaPt),
+    },
     body,
     isPublic: one("public").toLowerCase() === "true",
     initialLifecycle: one("lifecycle") || undefined,
     initialNextReview: one("next_review") || undefined,
   };
+}
+
+/** `**Label:** one line`, the convention in projects/README.md. */
+function labelled(body: string, label: string): string {
+  return (
+    body.match(new RegExp(`\\*\\*${label}:\\*\\*\\s*(.+)`))?.[1]?.trim() ?? ""
+  );
 }
 
 export function parseProjects(sources: string[] = []): DeclaredProject[] {

@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
+import { LOCALES } from "../src/core/localize.ts";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { worldviewErrors } from "../src/core/worldview.ts";
@@ -57,13 +58,16 @@ describe("project markdown", () => {
     // regex terminator gets wrong: it returned nothing until the end-of-string
     // lookahead was correct, and nothing looks the same as "not written yet".
     for (const project of projects) {
-      expect(project.outcome, `${project.id} has no declared outcome`).not.toBe(
-        "",
-      );
-      expect(
-        project.successCriteria.length,
-        `${project.id} has no success criteria`,
-      ).toBeGreaterThan(0);
+      for (const locale of LOCALES) {
+        expect(
+          project.outcome[locale],
+          `${project.id} has no declared outcome in ${locale}`,
+        ).not.toBe("");
+        expect(
+          project.successCriteria[locale].length,
+          `${project.id} has no success criteria in ${locale}`,
+        ).toBeGreaterThan(0);
+      }
     }
   });
 
@@ -79,7 +83,7 @@ describe("project prose", () => {
     const [project] = parseProjects([
       `---\nid: x\n---\n\n## Success criteria\n\n1. One thing that wraps\n   onto a second line.\n2. Another.\n`,
     ]);
-    expect(project?.successCriteria).toEqual([
+    expect(project?.successCriteria.en).toEqual([
       "One thing that wraps onto a second line.",
       "Another.",
     ]);
@@ -89,7 +93,10 @@ describe("project prose", () => {
     const [project] = parseProjects([
       `---\nid: x\n---\n\n## Declared outcome\n\nThe outcome.\n\nWhy it matters, at length.\n\n## Success criteria\n\n- a\n`,
     ]);
-    expect(project?.outcome).toBe("The outcome.");
-    expect(project?.outcomeDetail).toContain("Why it matters");
+    expect(project?.outcome.en).toBe("The outcome.");
+    expect(project?.outcomeDetail.en).toContain("Why it matters");
+    // Only English was written, so Portuguese falls back to it rather than
+    // rendering a project with no declared outcome at all.
+    expect(project?.outcome["pt-BR"]).toBe("The outcome.");
   });
 });

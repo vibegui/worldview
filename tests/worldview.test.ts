@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { DEFAULT_LOCALE, t } from "../src/core/localize.ts";
 import type { Env } from "../src/worker/env.ts";
 import { getDeclarationDashboard, setStrategicResultProgress } from "../src/worker/state.ts";
 import { SCORE_IDS } from "../src/core/worldview.ts";
@@ -83,8 +84,9 @@ describe("declaration: git structure joined with D1 measurement", () => {
     const joined = dashboard.strategic_results.find((r) => r.id === target.id);
     expect(joined?.progress_percent).toBe(35);
     expect(joined?.progress_note).toBe("evidence");
-    // Structure still comes from git, not from the D1 row.
-    expect(joined?.title).toBe(target.title);
+    // Structure still comes from git, not from the D1 row — and in the language
+    // asked for, which defaults to Portuguese.
+    expect(joined?.title).toBe(t(target.title, DEFAULT_LOCALE));
   });
 
   test("there are exactly two scores", async () => {

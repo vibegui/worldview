@@ -1,3 +1,10 @@
+import {
+  DEFAULT_LOCALE,
+  t,
+  tAll,
+  type Locale,
+  type LocalizedText,
+} from "../core/localize.ts";
 import type { Env } from "./env.ts";
 import {
   SCORE_IDS,
@@ -66,7 +73,10 @@ export interface RememberInput {
  * are evidence, not declaration. A result declared in git with no row in D1 yet
  * simply reads as 0% — no migration needed to add one.
  */
-export async function getDeclarationDashboard(env: Env) {
+export async function getDeclarationDashboard(
+  env: Env,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const [progressRows, scorecard, lifecycleRows] =
     await Promise.all([
       env.DB.prepare(
@@ -123,10 +133,14 @@ export async function getDeclarationDashboard(env: Env) {
         position: result.position,
         stage: result.stage ?? null,
         score: result.score ?? null,
-        title: result.title,
-        narrative: result.narrative,
-        acceptance_criteria: result.acceptanceCriteria,
-        metrics: result.metrics,
+        title: t(result.title, locale),
+        narrative: t(result.narrative, locale),
+        acceptance_criteria: tAll(result.acceptanceCriteria, locale),
+        metrics: result.metrics.map((metric) => ({
+          ...metric,
+          label: t(metric.label, locale),
+          unit: t(metric.unit, locale),
+        })),
         progress_percent: Number(progress?.progress_percent ?? 0),
         progress_note: String(progress?.progress_note ?? ""),
         updated_at: progress?.updated_at ?? null,
@@ -153,11 +167,13 @@ export async function getDeclarationDashboard(env: Env) {
         const current = row?.current_value ?? row?.boolean_value ?? null;
         return {
           ...metric,
+          label: t(metric.label, locale),
+          unit: t(metric.unit, locale),
           current: current === null ? null : Number(current),
           note: String(row?.note ?? ""),
           updated_at: row?.updated_at ?? null,
           result_id: result.id,
-          result_title: result.title,
+          result_title: t(result.title, locale),
         };
       }),
     );
@@ -169,21 +185,20 @@ export async function getDeclarationDashboard(env: Env) {
     scorecard: scorecardMetrics,
     scores: {
       alignment: {
-        ...env.worldview.scores.alignment,
+        ...localizedScore(env.worldview.scores.alignment, locale),
         ...pickScoreValue(scoreValueById.get("alignment")),
         // Derived last, so it wins over anything previously typed into the
         // scorecard row. The note explains the fraction rather than asserting it.
         current_value: alignmentValue,
-        note:
-          active > 0
-            ? `${serving} of ${active} active projects serve a declared result` +
-              (unaligned > 0
-                ? `; ${unaligned} ${unaligned === 1 ? "serves" : "serve"} nothing declared`
-                : "")
-            : "No active projects to measure",
+        note: alignmentNote(locale, active, serving, unaligned),
       },
       integrity: {
-        ...env.worldview.scores.integrity,
+        ...localizedScore(env.worldview.scores.integrity, locale),
+        domains: Object.fromEntries(
+          Object.entries(env.worldview.scores.integrity.domains).map(
+            ([name, text]) => [name, t(text, locale)],
+          ),
+        ),
         ...pickScoreValue(scoreValueById.get("integrity")),
       },
     },
@@ -196,6 +211,46 @@ export async function getDeclarationDashboard(env: Env) {
         !SCORE_IDS.includes(String(row.id) as ScoreId) &&
         !measuredIds.has(String(row.id)),
     ),
+  };
+}
+
+/** The one sentence the worker writes rather than reads, so it is translated here. */
+function alignmentNote(
+  locale: Locale,
+  active: number,
+  serving: number,
+  unaligned: number,
+): string {
+  if (active === 0) {
+    return locale === "en"
+      ? "No active projects to measure"
+      : "Nenhum projeto ativo para medir";
+  }
+  if (locale === "en") {
+    return (
+      `${serving} of ${active} active projects serve a declared result` +
+      (unaligned > 0
+        ? `; ${unaligned} ${unaligned === 1 ? "serves" : "serve"} nothing declared`
+        : "")
+    );
+  }
+  return (
+    `${serving} de ${active} projetos ativos servem um resultado declarado` +
+    (unaligned > 0
+      ? `; ${unaligned} não ${unaligned === 1 ? "serve" : "servem"} nada declarado`
+      : "")
+  );
+}
+
+function localizedScore<T extends Record<string, unknown>>(
+  score: T,
+  locale: Locale,
+) {
+  return {
+    ...score,
+    label: t(score.label as LocalizedText, locale),
+    question: t(score.question as LocalizedText, locale),
+    measure: t(score.measure as LocalizedText, locale),
   };
 }
 
@@ -297,7 +352,11 @@ export async function updateScorecardItem(
  * row for a project nobody declared is dropped, because state about a project
  * that does not exist is not information.
  */
-export async function getPortfolio(env: Env, publicOnly = false) {
+export async function getPortfolio(
+  env: Env,
+  publicOnly = false,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const stateRows = await env.DB.prepare(
     `SELECT
       p.*,
@@ -327,9 +386,9 @@ export async function getPortfolio(env: Env, publicOnly = false) {
         id: declared.id,
         name: declared.name,
         repository: declared.repo ?? null,
-        spirit: declared.spirit,
-        current_outcome: declared.outcome,
-        success_criteria: declared.successCriteria,
+        spirit: declared.spirit[locale],
+        current_outcome: declared.outcome[locale],
+        success_criteria: declared.successCriteria[locale],
         // Many-to-many: real work serves more than one result, and forcing a
         // single choice would make alignment lie by omission.
         serves: declared.serves,
@@ -466,7 +525,11 @@ export async function setProjectProgress(
   return getProject(env, id);
 }
 
-export async function getProject(env: Env, id: string) {
+export async function getProject(
+  env: Env,
+  id: string,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const declared = env.projects.find((project) => project.id === id);
   if (!declared) throw new Error(`Project not declared in git: ${id}`);
 
@@ -480,9 +543,9 @@ export async function getProject(env: Env, id: string) {
     id: declared.id,
     name: declared.name,
     repository: declared.repo ?? null,
-    spirit: declared.spirit,
-    current_outcome: declared.outcome,
-    success_criteria: declared.successCriteria,
+    spirit: declared.spirit[locale],
+    current_outcome: declared.outcome[locale],
+    success_criteria: declared.successCriteria[locale],
     serves: declared.serves,
     body: declared.body,
     lifecycle: state?.lifecycle ?? declared.initialLifecycle ?? "draft",

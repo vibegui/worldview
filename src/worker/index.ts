@@ -1,3 +1,4 @@
+import type { Locale } from "../core/localize.ts";
 import { accessForRequest } from "./auth.ts";
 import {
   BookmarkError,
@@ -240,7 +241,13 @@ export function createWorker(config: ResolvedConfig): ExportedHandler<Env> {
     // survives a refresh. Listed rather than a catch-all, so an actual typo is
     // still a 404 instead of a page that renders and then does nothing.
     if (request.method === "GET" && VIEW_PATHS.has(url.pathname)) {
-      return new Response(appHtml(env, null, true), {
+      // `/en/...` is English, everything else Portuguese — the same rule the app
+      // uses, applied one layer earlier so the first paint is already right.
+      const locale: Locale =
+        url.pathname === "/en" || url.pathname.startsWith("/en/")
+          ? "en"
+          : "pt-BR";
+      return new Response(appHtml(env, null, true, locale), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           // A signed-in view must never be cached by anything in front of the

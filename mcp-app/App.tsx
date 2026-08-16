@@ -74,9 +74,95 @@ function localeFromPath(pathname: string): Locale {
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "pt-BR";
 }
 
+// Only the tools that declare a `locale` input get one. Sending it to the rest
+// would be an argument they never asked for, on a schema that says otherwise.
+const LOCALE_AWARE = ["GET_DECLARATION", "GET_PORTFOLIO", "GET_PROJECT"];
+
+function argsFor(tool: string, locale: Locale): Record<string, unknown> {
+  return LOCALE_AWARE.includes(tool) ? { locale } : {};
+}
+
 function pathFor(path: string, locale: Locale): string {
   if (locale !== "en") return path;
   return path === "/" ? "/en/" : `/en${path}`;
+}
+
+
+/**
+ * Chrome, in both languages.
+ *
+ * The declaration's *content* is translated server-side, where the declaration
+ * lives. These are the words this app adds around it — headings, labels, empty
+ * states — so they are the app's to translate, and leaving them in English made
+ * a Portuguese page read half-translated.
+ *
+ * Read from the URL at render time rather than threaded through every component:
+ * `/en/...` already is the locale, and it is the same source of truth the router
+ * and the worker use.
+ */
+const UI = {
+  aboutMyLife: { "pt-BR": "O que é a minha vida", en: "What my life is about" },
+  metricsEyebrow: {
+    "pt-BR": "Métricas que confirmam o sucesso",
+    en: "Metrics that confirm success",
+  },
+  scorecard: { "pt-BR": "Placar", en: "Scorecard" },
+  gameEyebrow: {
+    "pt-BR": "Que jogo eu estou jogando",
+    en: "What game I am playing",
+  },
+  strategicResults: {
+    "pt-BR": "Resultados estratégicos",
+    en: "Strategic results",
+  },
+  conditionsEyebrow: {
+    "pt-BR": "Independente das circunstâncias",
+    en: "Regardless of circumstances",
+  },
+  conditions: {
+    "pt-BR": "Condições de satisfação",
+    en: "Conditions of satisfaction",
+  },
+  showScores: {
+    "pt-BR": "Mostrar os dois placares e leituras antigas",
+    en: "Show the two scores and older readings",
+  },
+  hideScores: {
+    "pt-BR": "Esconder os dois placares",
+    en: "Hide the two scores",
+  },
+  result: { "pt-BR": "Resultado", en: "Result" },
+  oneProject: { "pt-BR": "1 projeto", en: "1 project" },
+  projects: { "pt-BR": "projetos", en: "projects" },
+  acceptanceCriteria: {
+    "pt-BR": "Critérios de aceitação",
+    en: "Acceptance criteria",
+  },
+  metrics: { "pt-BR": "Métricas", en: "Metrics" },
+  target: { "pt-BR": "meta", en: "target" },
+  portfolio: { "pt-BR": "Portfólio", en: "Portfolio" },
+  projectsCount: { "pt-BR": "projetos", en: "projects" },
+  serves: { "pt-BR": "Serve", en: "Serves" },
+  servesNothing: {
+    "pt-BR": "Não serve nada declarado",
+    en: "Serves nothing declared",
+  },
+  activeGoals: { "pt-BR": "objetivos ativos", en: "active goals" },
+  openItems: { "pt-BR": "itens abertos", en: "open items" },
+  unscored: { "pt-BR": "Sem nota", en: "Unscored" },
+  honestAssessment: {
+    "pt-BR": "Faça uma avaliação honesta",
+    en: "Set an honest assessment",
+  },
+  notMeasured: { "pt-BR": "Ainda não medido", en: "Not yet measured" },
+} as const;
+
+function ui(key: keyof typeof UI): string {
+  const locale: Locale =
+    typeof window !== "undefined"
+      ? localeFromPath(window.location.pathname)
+      : "pt-BR";
+  return UI[key][locale];
 }
 
 export function App() {
@@ -117,7 +203,7 @@ export function App() {
     }
     if (next !== locale) setLocale(next);
     document.documentElement.lang = next;
-    void callTool(tool, {});
+    void callTool(tool, argsFor(tool, next));
   };
 
   useEffect(() => {
@@ -131,7 +217,7 @@ export function App() {
       : undefined;
     const boot = bootFlag ?? routed ?? toolName ?? nav[0]?.tool ?? "GET_DECLARATION";
     if (STANDALONE) document.documentElement.lang = locale;
-    void callTool(boot, {});
+    void callTool(boot, argsFor(boot, locale));
   }, [callTool, connected, nav, toolName]);
 
   // Back and forward move between tabs rather than out of the app.
@@ -142,7 +228,7 @@ export function App() {
       const next = localeFromPath(here);
       const item = nav.find((entry) => pathFor(entry.path, next) === here);
       setLocale(next);
-      if (item) void callTool(item.tool, {});
+      if (item) void callTool(item.tool, argsFor(item.tool, next));
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -319,7 +405,9 @@ function ResultView({
     return (
       <PortfolioView
         result={result}
-        openProject={(id) => void callTool("GET_PROJECT", { id })}
+        openProject={(id) =>
+          void callTool("GET_PROJECT", { id, locale: localeFromPath(window.location.pathname) })
+        }
         prepareBrief={() => void callTool("GET_DAILY_BRIEF_INPUT")}
       />
     );
@@ -354,20 +442,14 @@ function ResultView({
   }
   if (
     toolName === "GET_DECLARATION" ||
-    "what_my_life_is_about" in result ||
-    "markdown" in result
+    "what_my_life_is_about" in result
   ) {
-    // GET_DECLARATION answers three questions; the long-form charter markdown
-    // still comes from DECLARATION.md in git, nested under the first one.
     const about = asNullableRecord(result.what_my_life_is_about);
     const game = asNullableRecord(result.what_game_i_am_playing);
-    const longForm = asNullableRecord(about?.long_form);
     const scores = asNullableRecord(result.am_i_playing_it_well);
     return (
       <DeclarationView
         declaredFuture={text(about?.declared_future)}
-        markdown={text(longForm?.markdown ?? result.markdown)}
-        source={text(longForm?.source ?? result.source)}
         conditions={asStrings(game?.conditions_of_satisfaction)}
         strategicResults={asRecords(
           game?.strategic_results ?? result.strategic_results,
@@ -443,8 +525,8 @@ function PortfolioView({
 
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Portfolio</p>
-          <h2>{projects.length} projects</h2>
+          <p className="eyebrow">{ui("portfolio")}</p>
+          <h2>\n            {projects.length} {ui("projectsCount")}\n          </h2>
         </div>
       </div>
 
@@ -484,19 +566,19 @@ function PortfolioView({
                   className={`serves ${asStrings(project.serves).length ? "" : "none"}`}
                 >
                   {asStrings(project.serves).length
-                    ? `Serves · ${asStrings(project.serves)
+                    ? `${ui("serves")} · ${asStrings(project.serves)
                         .map((id) => resultTitles[id] ?? id)
                         .join(" · ")}`
-                    : "Serves nothing declared"}
+                    : ui("servesNothing")}
                 </p>
                 <p className="spirit">
                   {text(project.spirit) || text(project.description)}
                 </p>
                 {operational && (
                   <footer>
-                    <span>{number(project.active_goal_count)} active goals</span>
+                    <span>\n                      {number(project.active_goal_count)} {ui("activeGoals")}\n                    </span>
                     <span>
-                      {number(project.open_work_item_count)} open items
+                      {number(project.open_work_item_count)} {ui("openItems")}
                     </span>
                     <span>{relativeTime(project.last_activity_at)}</span>
                   </footer>
@@ -561,7 +643,7 @@ function ProjectProgress({ project }: { project: JsonRecord }) {
     <div className="project-progress">
       <div className="progress-heading">
         <span className="project-label">Progress</span>
-        <strong>{assessed ? `${progress}%` : "Unscored"}</strong>
+        <strong>{assessed ? `${progress}%` : ui("unscored")}</strong>
       </div>
       <div
         className="progress-track"
@@ -573,7 +655,7 @@ function ProjectProgress({ project }: { project: JsonRecord }) {
       >
         <span style={{ width: `${progress}%` }} />
       </div>
-      <p>{text(project.progress_note) || "Set an honest assessment"}</p>
+      <p>{text(project.progress_note) || ui("honestAssessment")}</p>
     </div>
   );
 }
@@ -1314,8 +1396,6 @@ function BriefInputView({ result }: { result: JsonRecord }) {
 
 function DeclarationView({
   declaredFuture,
-  markdown,
-  source,
   conditions,
   strategicResults,
   scores,
@@ -1323,36 +1403,21 @@ function DeclarationView({
   diagnostics,
 }: {
   declaredFuture: string;
-  markdown: string;
-  source: string;
   conditions: string[];
   strategicResults: JsonRecord[];
   scores: JsonRecord | null;
   scorecard: JsonRecord[];
   diagnostics: JsonRecord[];
 }) {
-  const [charterExpanded, setCharterExpanded] = useState(false);
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
-  if (!declaredFuture && !markdown && !conditions.length) {
+  if (!declaredFuture && !conditions.length) {
     return <Empty message="The declaration could not be loaded." />;
   }
-  const charter = extractDeclarationSection(
-    markdown,
-    "## Charter",
-    "## Strategic Outcomes",
-  );
-  // The declaration is authoritative for both the statement and the conditions;
-  // the long-form markdown is optional detail that most instances never publish.
-  // Scraping it is only a fallback for a declaration written before the
-  // conditions moved into worldview.json.
-  const conditionItems = conditions.length
-    ? conditions
-    : extractDeclarationSection(
-        markdown,
-        "## Conditions of Satisfaction",
-        "## December 2026 Scorecard",
-      ).bullets;
-  const statement = declaredFuture || charter.paragraphs[0] || "";
+  // worldview.json is the whole declaration. There used to be a second one
+  // fetched from the blog's DECLARATION.md and shown behind "Read the full
+  // charter" — a product charter from an older cycle, quietly contradicting the
+  // one above it.
+  const statement = declaredFuture;
   const alignment = asNullableRecord(scores?.alignment);
   const integrity = asNullableRecord(scores?.integrity);
 
@@ -1364,34 +1429,12 @@ function DeclarationView({
           numbers in the system under a fold. */}
       <div className="declaration-hero">
       <section className="charter-card">
-        <p className="eyebrow">What my life is about</p>
+        <p className="eyebrow">{ui("aboutMyLife")}</p>
         {statement.split("\n\n").map((paragraph) => (
           <p className="charter-statement" key={paragraph.slice(0, 40)}>
             {cleanMarkdown(paragraph)}
           </p>
         ))}
-        {charter.bullets.length > 0 && (
-          <>
-            <button
-              type="button"
-              className="charter-toggle"
-              aria-expanded={charterExpanded}
-              onClick={() => setCharterExpanded((expanded) => !expanded)}
-            >
-              {charterExpanded
-                ? "Hide the full charter"
-                : "Read the full charter"}
-              <span aria-hidden="true">{charterExpanded ? "↑" : "↓"}</span>
-            </button>
-            {charterExpanded && (
-              <ul className="charter-details">
-                {charter.bullets.map((item) => (
-                  <li key={item}>{cleanMarkdown(item)}</li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
       </section>
 
       </div>
@@ -1403,8 +1446,8 @@ function DeclarationView({
       <section className="declaration-block scores-block">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Metrics that confirm success</p>
-            <h2>Scorecard</h2>
+            <p className="eyebrow">{ui("metricsEyebrow")}</p>
+            <h2>{ui("scorecard")}</h2>
           </div>
         </div>
         <div className="scorecard-grid scores-grid">
@@ -1417,8 +1460,8 @@ function DeclarationView({
       <section className="declaration-block">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">What game I am playing</p>
-            <h2>Strategic results</h2>
+            <p className="eyebrow">{ui("gameEyebrow")}</p>
+            <h2>{ui("strategicResults")}</h2>
           </div>
         </div>
         <div className="strategic-results">
@@ -1431,12 +1474,12 @@ function DeclarationView({
       <section className="declaration-block conditions">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Regardless of circumstances</p>
-            <h2>Conditions of satisfaction</h2>
+            <p className="eyebrow">{ui("conditionsEyebrow")}</p>
+            <h2>{ui("conditions")}</h2>
           </div>
         </div>
         <ul>
-          {conditionItems.map((item) => (
+          {conditions.map((item) => (
             <li key={item}>{cleanMarkdown(item)}</li>
           ))}
         </ul>
@@ -1450,8 +1493,8 @@ function DeclarationView({
           onClick={() => setDiagnosticsExpanded((expanded) => !expanded)}
         >
           {diagnosticsExpanded
-            ? "Hide the two scores"
-            : "Show the two scores and older readings"}
+            ? ui("hideScores")
+            : ui("showScores")}
           <span aria-hidden="true">{diagnosticsExpanded ? "↑" : "↓"}</span>
         </button>
         {diagnosticsExpanded && (
@@ -1471,13 +1514,6 @@ function DeclarationView({
         )}
       </section>
 
-      {source && (
-        <footer>
-          <a href={source} target="_blank" rel="noopener noreferrer">
-            View canonical declaration on GitHub ↗
-          </a>
-        </footer>
-      )}
     </article>
   );
 }
@@ -1531,7 +1567,7 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
       <header>
         <div>
           <p className="eyebrow">
-            Result {String(number(result.position)).padStart(2, "0")}
+            {ui("result")} {String(number(result.position)).padStart(2, "0")}
             {" · "}
             {/* Declared progress next to how much active work actually points
                 here. A result at 40% with no projects is the gap the whole
@@ -1542,8 +1578,8 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
               }
             >
               {number(result.active_project_count) === 1
-                ? "1 project"
-                : `${number(result.active_project_count)} projects`}
+                ? ui("oneProject")
+                : `${number(result.active_project_count)} ${ui("projects")}`}
             </span>
           </p>
           <h3>{text(result.title)}</h3>
@@ -1557,7 +1593,7 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
       <p className="result-progress-note">{text(result.progress_note)}</p>
       <div className="result-details">
         <div>
-          <p className="project-label">Acceptance criteria</p>
+          <p className="project-label">{ui("acceptanceCriteria")}</p>
           <ul>
             {criteria.map((criterion) => (
               <li key={criterion}>{criterion}</li>
@@ -1565,7 +1601,7 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
           </ul>
         </div>
         <div>
-          <p className="project-label">Metrics</p>
+          <p className="project-label">{ui("metrics")}</p>
           <div className="result-metrics">
             {metrics.map((metric) => {
               // Metrics are declared in git with a target only; nothing in D1
@@ -1622,7 +1658,9 @@ function MetricCard({ metric }: { metric: JsonRecord }) {
         </strong>
       ) : (
         <strong className="not-yet">
-          <span>target {target}</span>
+          <span>
+            {ui("target")} {target}
+          </span>
         </strong>
       )}
       {!holdAtZero && (
@@ -1671,29 +1709,6 @@ function ScorecardItem({ item }: { item: JsonRecord }) {
       {text(item.note) && <small>{text(item.note)}</small>}
     </article>
   );
-}
-
-function extractDeclarationSection(
-  markdown: string,
-  startHeading: string,
-  endHeading: string,
-): { paragraphs: string[]; bullets: string[] } {
-  const start = markdown.indexOf(startHeading);
-  const end = markdown.indexOf(endHeading, start + startHeading.length);
-  if (start < 0) return { paragraphs: [], bullets: [] };
-  const body = markdown.slice(
-    start + startHeading.length,
-    end < 0 ? undefined : end,
-  );
-  const paragraphs: string[] = [];
-  const bullets: string[] = [];
-  for (const sourceLine of body.split("\n")) {
-    const line = sourceLine.trim();
-    if (!line) continue;
-    if (line.startsWith("- ")) bullets.push(line.slice(2));
-    else if (!line.startsWith("#")) paragraphs.push(line);
-  }
-  return { paragraphs, bullets };
 }
 
 function cleanMarkdown(value: string): string {

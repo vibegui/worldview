@@ -1,3 +1,4 @@
+import { LOCALES, missingLocales, t, type LocalizedText } from "./localize.ts";
 /**
  * The declared future lives in git, not D1 — and in the *instance's* git, not
  * this library's.
@@ -20,17 +21,17 @@ export interface WorldviewMetric {
    * An id with no row yet reads as unmeasured — which is not the same as zero.
    */
   id: string;
-  label: string;
+  label: LocalizedText;
   target: number;
-  unit: string;
+  unit: LocalizedText;
 }
 
 export interface WorldviewStrategicResult {
   id: string;
   position: number;
-  title: string;
-  narrative: string;
-  acceptanceCriteria: string[];
+  title: LocalizedText;
+  narrative: LocalizedText;
+  acceptanceCriteria: LocalizedText[];
   metrics: WorldviewMetric[];
   /** Which stage of the loop this result belongs to, if it is production work. */
   stage?: "ideas" | "expansion" | "execution" | "content" | "distribution";
@@ -56,23 +57,27 @@ export interface WorldviewDeclaration {
    * JSON string is the worst part of editing a declaration, and the declared
    * future is the field its author touches most.
    */
-  declaredFuture?: string;
+  declaredFuture?: LocalizedText;
   scores: {
     alignment: {
-      label: string;
-      question: string;
-      measure: string;
+      label: LocalizedText;
+      question: LocalizedText;
+      measure: LocalizedText;
       kind: string;
     };
     integrity: {
-      label: string;
-      question: string;
-      measure: string;
+      label: LocalizedText;
+      question: LocalizedText;
+      measure: LocalizedText;
       kind: string;
-      domains: { word: string; systems: string; objects: string };
+      domains: {
+        word: LocalizedText;
+        systems: LocalizedText;
+        objects: LocalizedText;
+      };
     };
   };
-  conditionsOfSatisfaction: string[];
+  conditionsOfSatisfaction: LocalizedText[];
   strategicResults: WorldviewStrategicResult[];
 }
 
@@ -81,13 +86,13 @@ export interface WorldviewDeclaration {
  * `declaredFuture` is always a string here, whichever source it came from.
  */
 export interface Worldview extends WorldviewDeclaration {
-  declaredFuture: string;
+  declaredFuture: LocalizedText;
 }
 
 export interface WorldviewInput {
   declaration: unknown;
   /** Markdown prose. Falls back to `declaration.declaredFuture` when omitted. */
-  declaredFuture?: string;
+  declaredFuture?: LocalizedText;
 }
 
 /** Merge the two halves an instance provides into the shape everything reads. */
@@ -95,11 +100,7 @@ export function resolveWorldview(input: WorldviewInput): Worldview {
   const declaration = input.declaration as WorldviewDeclaration;
   return {
     ...declaration,
-    declaredFuture: (
-      input.declaredFuture ??
-      declaration?.declaredFuture ??
-      ""
-    ).trim(),
+    declaredFuture: input.declaredFuture ?? declaration?.declaredFuture ?? "",
   };
 }
 
@@ -125,14 +126,28 @@ export function worldviewErrors(input: WorldviewInput): string[] {
   if (!slug.test(candidate.instance ?? "")) {
     errors.push("instance must be a lowercase slug — it is a URI segment");
   }
+  // Every language, not just the default: a declaration that silently reads in
+  // English on the Portuguese page is the failure this is here to catch.
   for (const field of ["name", "declaredFuture"] as const) {
-    if (!candidate[field]?.trim()) errors.push(`${field} is required`);
-  }
-  for (const domain of ["word", "systems", "objects"] as const) {
-    if (!candidate.scores?.integrity?.domains?.[domain]?.trim()) {
-      errors.push(`integrity domain "${domain}" is required`);
+    const missing = missingLocales(candidate[field]);
+    if (missing.length === LOCALES.length) errors.push(`${field} is required`);
+    else if (missing.length) {
+      errors.push(`${field} is missing ${missing.join(", ")}`);
     }
   }
+  for (const domain of ["word", "systems", "objects"] as const) {
+    if (missingLocales(candidate.scores?.integrity?.domains?.[domain]).length) {
+      errors.push(`integrity domain "${domain}" is required in both languages`);
+    }
+  }
+  candidate.conditionsOfSatisfaction?.forEach((condition, index) => {
+    const missing = missingLocales(condition);
+    if (missing.length) {
+      errors.push(
+        `conditionsOfSatisfaction[${index}] is missing ${missing.join(", ")}`,
+      );
+    }
+  });
   if (!candidate.strategicResults?.length) {
     errors.push("declare at least one strategic result");
   }
@@ -149,20 +164,33 @@ export function worldviewErrors(input: WorldviewInput): string[] {
     } else if (seenPositions.has(result.position)) {
       errors.push(`${at}: position ${result.position} collides`);
     }
-    if (!result.title?.trim() || !result.narrative?.trim()) {
-      errors.push(`${at}: title and narrative are required`);
+    for (const field of ["title", "narrative"] as const) {
+      const missing = missingLocales(result[field]);
+      if (missing.length) {
+        errors.push(`${at}: ${field} is missing ${missing.join(", ")}`);
+      }
     }
     if (!result.acceptanceCriteria?.length) {
       errors.push(`${at}: needs at least one acceptance criterion`);
     }
+    result.acceptanceCriteria?.forEach((criterion, index) => {
+      const missing = missingLocales(criterion);
+      if (missing.length) {
+        errors.push(
+          `${at}: acceptanceCriteria[${index}] is missing ${missing.join(", ")}`,
+        );
+      }
+    });
     for (const metric of result.metrics ?? []) {
       if (typeof metric.target !== "number") {
-        errors.push(`${at}: metric "${metric.label}" needs a numeric target`);
+        errors.push(
+          `${at}: metric "${t(metric.label, "en")}" needs a numeric target`,
+        );
       }
       // Without an id there is nowhere for the reading to come from, so the
       // metric renders as a target forever and nobody notices it is not wired.
       if (!slug.test(metric.id ?? "")) {
-        errors.push(`${at}: metric "${metric.label}" needs a slug id`);
+        errors.push(`${at}: metric "${t(metric.label, "en")}" needs a slug id`);
       } else if (seenMetricIds.has(metric.id)) {
         errors.push(`${at}: metric id "${metric.id}" is used twice`);
       }

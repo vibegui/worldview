@@ -197,7 +197,7 @@ describe("what a stranger may see", () => {
   test("the public shape of a project never carries its prose", () => {
     const open = projects.find((p) => p.id === "open")!;
     const shape = publicProject(open);
-    expect(shape.outcome).toBe("Visible.");
+    expect(shape.outcome.en).toBe("Visible.");
     // The competitive sections live in the body, which is why it is omitted
     // entirely rather than filtered.
     expect(JSON.stringify(shape)).not.toContain("Competing with a colleague");

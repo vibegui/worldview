@@ -1,4 +1,5 @@
 import { appBundleHtml } from "../generated/app-html.ts";
+import { DEFAULT_LOCALE, t, type Locale } from "../core/localize.ts";
 import type { AccessLevel, Env } from "./env.ts";
 import {
   ANALYTICS_RESOURCE,
@@ -66,6 +67,7 @@ export function appHtml(
   env: Env,
   bootTool: string | null,
   standalone = false,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
   const html = appBundleHtml;
   // The bundle is built once into the library; the declaration belongs to the
@@ -73,14 +75,20 @@ export function appHtml(
   // otherwise every deployment would ship whoever built the library's worldview.
   // Names and titles only: the app calls GET_DECLARATION for the rest.
   const declaration = {
-    name: env.worldview.name,
+    name: t(env.worldview.name, locale),
+    // Resolved here rather than shipped as both languages: the worker already
+    // knows which URL it is answering, and a card that renders "[object Object]"
+    // is what happens when a localized field escapes to the client unresolved.
     results: Object.fromEntries(
-      env.worldview.strategicResults.map((result) => [result.id, result.title]),
+      env.worldview.strategicResults.map((result) => [
+        result.id,
+        t(result.title, locale),
+      ]),
     ),
   };
   // Rewritten in the markup rather than set from script, so the tab is right on
   // first paint and a crawler sees it at all.
-  const title = env.site?.title ?? env.worldview.name;
+  const title = env.site?.title ?? t(env.worldview.name, locale);
   let head = html.replace(
     /<title>[\s\S]*?<\/title>/,
     `<title>${escapeHtml(title)}</title>`,

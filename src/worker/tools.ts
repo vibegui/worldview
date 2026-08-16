@@ -19,10 +19,10 @@ import {
   searchBookmarks,
   updateBookmark,
 } from "./bookmarks.ts";
+import { DEFAULT_LOCALE, isLocale, t, tAll, type Locale } from "../core/localize.ts";
 import type { AccessLevel, Env } from "./env.ts";
 import { refreshGitHub } from "./github.ts";
 import {
-  getDeclaration,
   getPublicWriting,
   listPublicWriting,
   searchPublicWriting,
@@ -544,26 +544,31 @@ export const tools: ToolDefinition[] = [
     description:
       "What my life is about, what game I am playing, and whether I am playing it well: the declared future, the strategic results with their progress, the conditions of satisfaction, and the two scores. Public — the gap between what was declared and what is measured is meant to be checkable by someone other than its author.",
     access: "public",
-    inputSchema: objectSchema({}),
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        enum: ["pt-BR", "en"],
+        default: "pt-BR",
+        description:
+          "Which language to answer in. Defaults to Portuguese, the language the declaration is written and edited in.",
+      },
+    }),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env, _input, access) => {
-      void _input;
-      // The long-form charter is optional detail: an instance that publishes one
-      // gets it nested under the declared future, and one that does not still
-      // gets a working declaration. Fetching it must never fail the whole tool.
-      const [declaration, dashboard] = await Promise.all([
-        getDeclaration(env).catch(() => null),
-        getDeclarationDashboard(env),
-      ]);
+    execute: async (env, input, access) => {
+      const locale = localeOf(input);
+      const dashboard = await getDeclarationDashboard(env, locale);
 
       return {
+        locale,
         what_my_life_is_about: {
-          declared_future: env.worldview.declaredFuture,
+          declared_future: t(env.worldview.declaredFuture, locale),
           source: "worldview.json",
-          long_form: declaration,
         },
         what_game_i_am_playing: {
-          conditions_of_satisfaction: env.worldview.conditionsOfSatisfaction,
+          conditions_of_satisfaction: tAll(
+            env.worldview.conditionsOfSatisfaction,
+            locale,
+          ),
           strategic_results: dashboard.strategic_results,
         },
         am_i_playing_it_well: dashboard.scores,
@@ -642,11 +647,22 @@ export const tools: ToolDefinition[] = [
     description:
       "The project map: what is being worked on, which declared strategic result each one serves, and how far along it is. Publicly this returns only projects that opted in with `public: true`, and never their prose — a project file states positions about work other people own.",
     access: "public",
-    inputSchema: objectSchema({}),
+    inputSchema: objectSchema({
+      locale: {
+        type: "string",
+        enum: ["pt-BR", "en"],
+        default: "pt-BR",
+        description:
+          "Which language to answer in. Defaults to Portuguese, the language the declaration is written and edited in.",
+      },
+    }),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env, _input, access) => {
-      void _input;
-      const portfolio = await getPortfolio(env, access !== "private");
+    execute: async (env, input, access) => {
+      const portfolio = await getPortfolio(
+        env,
+        access !== "private",
+        localeOf(input),
+      );
       if (access === "private") return portfolio;
       // Unfiled captures are an inbox, and the daily brief is working notes.
       // Neither is a declaration.
@@ -719,11 +735,15 @@ export const tools: ToolDefinition[] = [
       "Get one private project with its goals, active memories, decisions, inbox, and recent activity.",
     access: "private",
     inputSchema: objectSchema(
-      { id: { type: "string", description: "Project id" } },
+      {
+        id: { type: "string", description: "Project id" },
+        locale: { type: "string", enum: ["pt-BR", "en"], default: "pt-BR" },
+      },
       ["id"],
     ),
     _meta: { ui: { resourceUri: PERSONAL_AI_OS_RESOURCE } },
-    execute: async (env, input) => getProject(env, requiredString(input, "id")),
+    execute: async (env, input) =>
+      getProject(env, requiredString(input, "id"), localeOf(input)),
   },
   {
     name: "GET_ATTENTION_MAP",
@@ -1207,6 +1227,12 @@ function requiredString(input: Record<string, unknown>, key: string): string {
     throw new Error(`${key} is required`);
   }
   return value.trim();
+}
+
+/** Which language the caller asked for. Anything unrecognised reads as default. */
+function localeOf(input: Record<string, unknown>): Locale {
+  const value = input.locale;
+  return isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
 function optionalString(
