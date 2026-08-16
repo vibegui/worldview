@@ -111,20 +111,174 @@ button {
 }
 
 .topbar-inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 24px;
   min-height: 64px;
 }
 
-/* The nav takes the slack so the sign out button stays pinned right. min-width
-   lets it shrink and scroll instead of shoving the button off screen. */
-.topbar-inner .nav {
-  min-width: 0;
-  margin-bottom: 0;
+/* One row at every width: the wordmark, and a menu.
+   The tab strip is gone. Seven tabs, a language switch and a sign-out button
+   never fit the 1024 container — "Blog" sat clipped behind PT/EN on a desktop —
+   and on a phone they dropped to a second full-bleed row that cost a band of the
+   screen and, being a scroll container, could be dragged vertically too. A menu
+   holds all nine in a list that is never too narrow for any of them. */
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   margin-left: auto;
-  border-bottom: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.menu-toggle:hover {
+  border-color: var(--muted);
+}
+
+/* Three rules drawn with the box's own borders — a span, its two
+   pseudo-elements and one border each, rather than an icon font or an inline
+   SVG for six pixels. Open, the outer two cross and the middle one goes. */
+.menu-bars,
+.menu-bars::before,
+.menu-bars::after {
+  display: block;
+  width: 16px;
+  border-top: 1.5px solid currentcolor;
+}
+
+.menu-bars {
+  position: relative;
+  height: 0;
+  transition: border-color 0.16s;
+}
+
+.menu-bars::before,
+.menu-bars::after {
+  position: absolute;
+  left: 0;
+  content: "";
+  transition:
+    top 0.16s,
+    transform 0.16s;
+}
+
+.menu-bars::before {
+  top: -5px;
+}
+
+.menu-bars::after {
+  top: 5px;
+}
+
+[aria-expanded="true"] .menu-bars {
+  border-top-color: transparent;
+}
+
+[aria-expanded="true"] .menu-bars::before,
+[aria-expanded="true"] .menu-bars::after {
+  top: 0;
+}
+
+[aria-expanded="true"] .menu-bars::before {
+  transform: rotate(45deg);
+}
+
+[aria-expanded="true"] .menu-bars::after {
+  transform: rotate(-45deg);
+}
+
+/* Covers the page so the next click anywhere closes the menu, and nothing
+   underneath is hit by accident on the way. */
+.menu-scrim {
+  position: fixed;
+  z-index: 8;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.4);
+  inset: 0;
+}
+
+.topbar-actions {
+  display: none;
+}
+
+.topbar-actions.is-open {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 1rem;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 4px;
+  min-width: 14rem;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+}
+
+.topbar-actions.is-open .nav {
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  border-bottom: 0;
+  gap: 0;
+  overflow: visible;
+}
+
+.topbar-actions.is-open .nav button,
+.topbar-actions.is-open .nav-away {
+  padding: 11px 12px 13px;
+  border-radius: 9px;
+  font-size: 15px;
+  text-align: left;
+}
+
+.topbar-actions.is-open .nav button.active {
+  background: rgb(255 255 255 / 0.05);
+}
+
+/* The mark for the active tab is an underline along the bottom of a button that
+   is exactly as wide as its label. Stacked, those buttons are all the width of
+   the panel, so it becomes a short rule under the first word instead. */
+.topbar-actions.is-open .nav button.active::after {
+  right: auto;
+  bottom: 7px;
+  left: 12px;
+  width: 20px;
+}
+
+.topbar-actions.is-open .nav-away::after {
+  display: none;
+}
+
+.topbar-actions.is-open .language-switch {
+  padding: 10px 12px 6px;
+  border-top: 1px solid var(--border);
+  margin: 4px 0 0;
+}
+
+.topbar-actions.is-open form {
+  padding: 0 12px 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-bars,
+  .menu-bars::before,
+  .menu-bars::after {
+    transition: none;
+  }
 }
 
 .section-heading h2,
@@ -145,9 +299,15 @@ button {
   text-transform: uppercase;
 }
 
+/* A button, because it goes home. Its own reset: a bare `button` arrives with a
+   user-agent background, border and font that none of this inherits. */
 .os-label {
+  padding: 0;
+  border: 0;
   margin: 0;
+  background: transparent;
   color: var(--text);
+  cursor: pointer;
   font-family: var(--font-sans);
   font-variation-settings: "wdth" 88;
   font-size: 15px;
@@ -3184,34 +3344,10 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 /* ---------- narrow ---------- */
-/* On a phone the header cannot be one row: a wordmark, five tabs, a language
-   switch and a sign-out button in 390px leaves each of them a few pixels. The
-   nav drops to its own full-bleed row and scrolls there, which is what a
-   scrolling nav needs to be usable — room to scroll in. */
 @media (max-width: 700px) {
   .topbar-inner {
-    flex-wrap: wrap;
     gap: 12px;
-    padding-top: 12px;
-    padding-bottom: 4px;
-    min-height: 0;
-  }
-
-  .topbar-inner .nav {
-    order: 3;
-    flex: 1 0 100%;
-    margin-left: 0;
-    margin-inline: calc(var(--gutter, 1.5rem) * -1);
-    padding-inline: var(--gutter, 1.5rem);
-    scrollbar-width: none;
-  }
-
-  .topbar-inner .nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .os-label {
-    margin-right: auto;
+    min-height: 56px;
   }
 
   /* The orb leads on a phone, where there is no room beside the title for it. */
