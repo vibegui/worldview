@@ -3233,3 +3233,17 @@ button.analytics-row:focus-visible .analytics-fill {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Aimed at this result, versus contributing to it on the way somewhere else. */
+.result-project.secondary {
+  border-color: rgb(var(--ink) / 0.18);
+  background: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.result-projects-empty {
+  color: rgb(var(--ink) / 0.85);
+  font-style: normal;
+  line-height: 1.4;
+}

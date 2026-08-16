@@ -46,19 +46,19 @@ const NAV_ITEMS = [
     path: "/",
   },
   {
+    label: { en: "Results", "pt-BR": "Resultados" },
+    tool: "GET_DECLARATION",
+    path: "/resultados",
+  },
+  {
     // Three tabs share GET_DECLARATION. That payload answers three questions and
     // they are read at different moments — the declaration when you want to
-    // remember what you said, the scoreboard when you want a number, the results
-    // when you want to know whether the game is being played. One page holding
+    // remember what you said, the results when you want to know whether the game
+    // is being played, the scoreboard when you want a number. One page holding
     // all three meant scrolling past two to reach the one you came for.
     label: { en: "Scoreboard", "pt-BR": "Placar" },
     tool: "GET_DECLARATION",
     path: "/placar",
-  },
-  {
-    label: { en: "Results", "pt-BR": "Resultados" },
-    tool: "GET_DECLARATION",
-    path: "/resultados",
   },
   {
     label: { en: "Projects", "pt-BR": "Projetos" },
@@ -211,6 +211,10 @@ const UI = {
   noProject: {
     "pt-BR": "Nenhum projeto persegue este resultado",
     en: "No project is pursuing this result",
+  },
+  noFocusedProject: {
+    "pt-BR": "Falta um projeto focado neste resultado — os acima contribuem a caminho de outro",
+    en: "No project is focused on this result — the ones above contribute on their way elsewhere",
   },
 } as const;
 
@@ -533,6 +537,7 @@ function PortfolioView({
   prepareBrief: () => void;
 }) {
   const projects = asRecords(result.projects);
+  const focused = projects.filter((project) => project.primary === true);
   const unfiled = asRecords(result.unfiled);
   // The brief is working notes, so the public payload omits the key entirely.
   // Its empty state still says "prepare the current evidence", which is an
@@ -1699,19 +1704,19 @@ function DeclarationView({
         <nav className="onward" aria-label={ui("onwardEyebrow")}>
           {[
             {
-              path: "/placar",
-              label: ui("scorecard"),
-              blurb: ui("onwardScoreboard"),
-              count: scorecard.length,
-              unit: ui("metricsCount"),
-              index: 0,
-            },
-            {
               path: "/resultados",
               label: ui("strategicResults"),
               blurb: ui("onwardResults"),
               count: strategicResults.length,
               unit: ui("resultsCount"),
+              index: 0,
+            },
+            {
+              path: "/placar",
+              label: ui("scorecard"),
+              blurb: ui("onwardScoreboard"),
+              count: scorecard.length,
+              unit: ui("metricsCount"),
               index: 1,
             },
             {
@@ -1829,6 +1834,7 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
   const progress = Math.min(100, Math.max(0, number(result.progress_percent)));
   const criteria = asStrings(result.acceptance_criteria);
   const projects = asRecords(result.projects);
+  const focused = projects.filter((project) => project.primary === true);
 
   return (
     <article className="strategic-result">
@@ -1848,7 +1854,9 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
         <ul className="result-projects">
           {projects.map((project) => (
             <li
-              className={`result-project ${text(project.lifecycle)}`}
+              className={`result-project ${text(project.lifecycle)} ${
+                project.primary === true ? "primary" : "secondary"
+              }`}
               key={text(project.id)}
             >
               <span>{text(project.name)}</span>
@@ -1858,8 +1866,15 @@ function StrategicResultCard({ result }: { result: JsonRecord }) {
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="result-projects-empty">{ui("noProject")}</p>
+      ) : null}
+
+      {/* Contributed to by everything and aimed at by nothing is the gap worth
+          naming. Seven projects touching a result says less than one project
+          existing for it. */}
+      {focused.length === 0 && (
+        <p className="result-projects-empty">
+          {projects.length === 0 ? ui("noProject") : ui("noFocusedProject")}
+        </p>
       )}
 
       {criteria.length > 0 && (

@@ -115,7 +115,13 @@ export async function getDeclarationDashboard(
   // reading next to it.
   const workByResult = new Map<
     string,
-    Array<{ id: string; name: string; repo: string | null; lifecycle: string }>
+    Array<{
+      id: string;
+      name: string;
+      repo: string | null;
+      lifecycle: string;
+      primary: boolean;
+    }>
   >();
   for (const project of env.projects) {
     const lifecycle = String(
@@ -130,6 +136,11 @@ export async function getDeclarationDashboard(
           name: project.name,
           repo: project.repo ?? null,
           lifecycle,
+          // `serves` is ordered. A project whose *first* result is this one is
+          // pointed at it; the rest contribute to it on the way somewhere else.
+          // A result that everything contributes to and nothing is aimed at is
+          // a result nobody is actually working on.
+          primary: project.serves[0] === result,
         },
       ]);
     }
