@@ -1,7 +1,7 @@
 {
   "version": 1,
   "instance": "vibegui",
-  "name": "vibegui — worldview",
+  "name": "vibegui ⋅ Worldview",
   "declaredFuture": {
     "pt-BR": "Sou um desenvolvedor-fundador comprometido em tornar o Brasil protagonista em tecnologia global. Foco nos motivos para dar certo e convido quem está ao meu redor a ver a vida assim também.\n\nDefendo que toda pessoa tenha liberdade para descobrir e viver seu maior potencial, e software é minha alavanca. Na deco, construo experiências digitais que se operam sozinhas — no aberto, porque um método que ninguém pode copiar é hobby e um método em que o próprio autor não vive é mentira.\n\nMinha vida é a primeira instância: todo projeto que me importa tem um resultado declarado, um estado honesto e um próximo passo. Dois placares, nenhum outro — alinhamento e integridade. Saúde, música, aprendizado e família todos os dias. É uma maratona. Do Rio, no aberto.",
     "en": "I am a developer-founder committed to making Brazil a protagonist in global technology. I look for the reasons it will work, and I invite the people around me to see life that way too.\n\nI hold that every person should be free to discover and live their greatest potential, and software is my lever. At deco I build digital experiences that run themselves — in the open, because a method nobody can copy is a hobby and a method its author will not live inside is a lie.\n\nMy life is the first instance: every project I care about has a declared outcome, an honest current state, and a next move. Two scores, no others — alignment and integrity. Health, music, learning, and family every day. It is a marathon. From Rio, in the open."
@@ -564,12 +564,12 @@
   ],
   "commitments": [
     {
-      "pt-BR": "Liberdade para ser e agir",
-      "en": "Freedom to be and to act"
-    },
-    {
       "pt-BR": "Brasil protagonista em Tecnologia",
       "en": "Brazil, a protagonist in technology"
+    },
+    {
+      "pt-BR": "Liberdade para ser e agir",
+      "en": "Freedom to be and to act"
     },
     {
       "pt-BR": "Poder é sereno",

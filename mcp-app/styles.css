@@ -20,14 +20,15 @@
   font-family: var(--font-sans);
   font-synthesis: none;
 
-  --bg: var(--color-background-primary, oklch(0.985 0.004 32));
-  --surface: var(--color-background-secondary, oklch(0.955 0.006 32));
+  --bg: var(--color-background-primary, oklch(0.985 0.004 152));
+  --surface: var(--color-background-secondary, oklch(0.955 0.006 152));
   --surface-raised: color-mix(in srgb, var(--surface) 65%, var(--bg));
   --text: var(--color-text-primary, #22211e);
   --muted: var(--color-text-secondary, #6f6b63);
   --border: var(--color-border-primary, #dedbd2);
-  --accent: oklch(0.55 0.19 32);
-  --accent-hover: oklch(0.47 0.19 32);
+  --accent: oklch(0.52 0.15 152);
+  --accent-hover: oklch(0.44 0.15 152);
+  --orb-ink: 32 150 82;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   background: var(--bg);
   color: var(--text);
@@ -40,8 +41,9 @@
   --text: var(--color-text-primary, #eeede7);
   --muted: var(--color-text-secondary, #a29f96);
   --border: var(--color-border-primary, #2b2e27);
-  --accent: oklch(0.72 0.17 38);
-  --accent-hover: oklch(0.8 0.14 40);
+  --accent: oklch(0.79 0.17 152);
+  --accent-hover: oklch(0.86 0.14 152);
+  --orb-ink: 96 236 150;
   --accent-soft: color-mix(in srgb, var(--accent) 11%, transparent);
   --serie-1: #42a065;
   --serie-2: #5d86de;
@@ -57,11 +59,14 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(
-      circle at 50% -10%,
-      var(--accent-soft),
-      transparent 38rem
-    ), var(--bg);
+  background:
+    radial-gradient(
+        130% 90% at 50% 0%,
+        color-mix(in srgb, var(--accent) 11%, transparent),
+        transparent 58%
+      )
+      fixed,
+    var(--bg);
   color: var(--text);
 }
 
@@ -167,7 +172,6 @@ button {
   font-weight: 700;
   letter-spacing: 0.01em;
   line-height: 28px;
-  text-transform: lowercase;
   white-space: nowrap;
 }
 
@@ -2506,9 +2510,6 @@ button.analytics-row:focus-visible .analytics-fill {
 }
 
 /* ---------- the opening spread ---------- */
-/* Asymmetric on purpose: the type column is wider than the orb column, so the
-   composition leans left the way a cover does, rather than sitting in the
-   centred two-up that every generated page defaults to. */
 .masthead {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
@@ -2550,42 +2551,91 @@ button.analytics-row:focus-visible .analytics-fill {
   color: var(--muted);
 }
 
-/* A real sequence of three, so the numerals carry information rather than
-   decorating a section the way numbered eyebrows do. */
+/* Three stacked switches, all one width. Same size on purpose: they are
+   alternatives of equal standing, and a row that sizes itself to its text would
+   rank them by how long the sentence happens to be. */
 .commitments {
   display: grid;
-  gap: 0.55rem;
-  margin: clamp(1.75rem, 4vh, 2.75rem) 0 0;
+  gap: 0.5rem;
+  margin: clamp(1.75rem, 4vh, 2.5rem) 0 0;
   padding: 0;
   list-style: none;
-  max-width: 30ch;
+  width: min(100%, 24rem);
 }
 
 .commitments li::before {
   content: none;
 }
 
-.commitments li {
-  display: grid;
-  grid-template-columns: 1.9rem 1fr;
-  align-items: baseline;
-  gap: 0.35rem;
+.commitment {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.1rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--muted);
   font-family: var(--font-sans);
   font-variation-settings: "wdth" 96;
   font-weight: 600;
-  font-size: clamp(1rem, 1.65vw, 1.3rem);
-  line-height: 1.25;
-  letter-spacing: -0.012em;
-  color: var(--text);
-  text-wrap: balance;
+  font-size: clamp(0.92rem, 1.35vw, 1.06rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.commitment-index {
+.commitment:hover {
+  color: var(--text);
+  border-color: rgb(var(--ink) / 0.5);
+}
+
+.commitment:focus-visible {
+  outline: 2px solid rgb(var(--ink));
+  outline-offset: 2px;
+}
+
+/* Lit: the button wears the colour its strand is drawn in, so the link between
+   the switch and the light is stated rather than remembered. */
+.commitment.is-lit {
+  color: var(--text);
+  border-color: rgb(var(--ink) / 0.85);
+  background: rgb(var(--ink) / 0.14);
+  box-shadow: 0 0 24px -6px rgb(var(--ink) / 0.55);
+}
+
+.commitment .commitment-index {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: rgb(var(--ink) / 0.16);
+  color: rgb(var(--ink));
   font-variation-settings: "wdth" 75;
   font-weight: 700;
-  font-size: 0.78em;
-  color: var(--accent);
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
+}
+
+.commitment.is-lit .commitment-index {
+  background: rgb(var(--ink));
+  color: #0b0f0c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commitment {
+    transition: none;
+  }
 }
 
 .masthead-orb {

@@ -42,7 +42,7 @@ export default createWorker({
   ]),
 
   site: {
-    title: "vibegui — worldview",
+    title: "vibegui ⋅ Worldview",
     author: "Guilherme Rodrigues",
     description:
       "Declaração 2030 — o que a minha vida é sobre, que jogo eu estou jogando, e se estou jogando bem.",

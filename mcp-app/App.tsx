@@ -1,6 +1,7 @@
+import type React from "react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { BookmarksView, isBookmarkTool } from "./bookmarks/BookmarksView";
-import { ThinkingOrb } from "./ThinkingOrb";
+import { STRAND_INKS, ThinkingOrb } from "./ThinkingOrb";
 import { useMcp } from "./mcp";
 
 const globals = (typeof window !== "undefined" ? window : {}) as {
@@ -245,7 +246,7 @@ export function App() {
           box for everything would put the rule in the wrong place. */}
       <header className="topbar">
         <div className="container topbar-inner">
-        <p className="os-label">{declaration.name ?? "vibegui — worldview"}</p>
+        <p className="os-label">{declaration.name ?? "vibegui ⋅ Worldview"}</p>
 
         <nav className="nav" aria-label="Worldview views">
           {nav.map((item) => (
@@ -1414,6 +1415,9 @@ function DeclarationView({
   diagnostics: JsonRecord[];
 }) {
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
+  // Which commitments are lit. Empty is the resting state and shows all three;
+  // selecting is a filter on the orb, not a claim about the declaration.
+  const [lit, setLit] = useState<number[]>([]);
   if (!declaredFuture && !conditions.length) {
     return <Empty message="The declaration could not be loaded." />;
   }
@@ -1443,19 +1447,41 @@ function DeclarationView({
           </h1>
           {commitments.length > 0 && (
             <ol className="commitments">
-              {commitments.map((commitment, index) => (
-                <li key={commitment}>
-                  <span className="commitment-index" aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  {commitment}
-                </li>
-              ))}
+              {commitments.map((commitment, index) => {
+                const ink = STRAND_INKS[index % STRAND_INKS.length]!;
+                const on = lit.includes(index);
+                return (
+                  <li key={commitment}>
+                    <button
+                      type="button"
+                      className={`commitment ${on ? "is-lit" : ""}`}
+                      aria-pressed={on}
+                      style={
+                        {
+                          "--ink": `${ink.r} ${ink.g} ${ink.b}`,
+                        } as React.CSSProperties
+                      }
+                      onClick={() =>
+                        setLit((current) =>
+                          current.includes(index)
+                            ? current.filter((item) => item !== index)
+                            : [...current, index],
+                        )
+                      }
+                    >
+                      <span className="commitment-index" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      {commitment}
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </div>
         <div className="masthead-orb">
-          <ThinkingOrb size={360} />
+          <ThinkingOrb size={360} active={lit} />
         </div>
       </header>
 
